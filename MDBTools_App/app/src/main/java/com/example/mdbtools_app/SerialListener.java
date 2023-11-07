@@ -8,6 +8,5 @@ interface SerialListener {
     void onSerialRead         (byte[] data);                // socket -> service
     void onSerialRead         (ArrayDeque<byte[]> datas);   // service -> UI thread
     void onSerialIoError      (Exception e);
-
 }
 

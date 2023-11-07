@@ -18,6 +18,7 @@ import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -33,6 +34,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mdbtools_app.Adapter.ProductAdapter;
@@ -63,8 +65,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean initialStart = true;
     private boolean hexEnabled = true;
     private String newline = "";
-//    private RecyclerView recyclerView;
-//    private ProductAdapter productAdapter;
+    private RecyclerView recyclerView;
+    private ProductAdapter productAdapter;
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -89,24 +91,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         deviceId = getArguments().getInt("device");
         portNum = getArguments().getInt("port");
         baudRate = getArguments().getInt("baud");
-
-//        recyclerView = recyclerView.findViewById(R.id.recyclerView);
-//        recyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 2));
-//        productAdapter = new ProductAdapter(getActivity(), generateSampleProductList(), (ProductAdapter.OnItemClickListener) getActivity()); // Pass this as the listener
-//        recyclerView.setAdapter(productAdapter);
-    }
-
-//    private List<Product> generateSampleProductList() {
-//        List<Product> products = new ArrayList<>();
-//        products.add(new Product("Pocari Sweat", "$9.99", R.drawable.product1));
-//        products.add(new Product("Oronamin C", "$19.99", R.drawable.product2));
-//        // Add more products as needed
-//        return products;
-//    }
-
-    @Override
-    public void onItemClick(Product product) {
-        send("03FFFF01");
     }
 
     @Override
@@ -196,9 +180,27 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
 
-        receiveText.setOnClickListener(v -> send("03FFFF01"));
+        recyclerView = view.findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        productAdapter = new ProductAdapter(getContext(), generateSampleProductList(), this);
+        recyclerView.setAdapter(productAdapter);
 
         return view;
+    }
+
+    private List<Product> generateSampleProductList() {
+        List<Product> products = new ArrayList<>();
+        products.add(new Product("Pocari Sweat", "$9.99", R.drawable.product1));
+        products.add(new Product("Oronamin C", "$19.99", R.drawable.product2));
+        products.add(new Product("Oronamin C", "$15.99", R.drawable.product2));
+        products.add(new Product("Pocari Sweat", "$22.99", R.drawable.product1));
+        // Add more products as needed
+        return products;
+    }
+
+    @Override
+    public void onItemClick(Product product) throws IOException, InterruptedException {
+        send("0300003");
     }
 
     @Override
@@ -212,13 +214,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (id == R.id.clear) {
             receiveText.setText("");
             return true;
-        }else if (id == R.id.viewVendingMachine) {
-            Intent intent = new Intent(getActivity(), VMCScreen.class);
-            startActivity(intent);
-
-            return true;
-        }
-        else if (id == R.id.responsePayment) {
+        } else if (id == R.id.responsePayment) {
             send("05006469");
             return true;
         }
@@ -306,7 +302,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         usbSerialPort = null;
     }
 
-    private void send(String str) {
+    void send(String str) {
         if(connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
@@ -320,7 +316,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 TextUtil.toHexString(sb, newline.getBytes());
                 msg = sb.toString();
                 data = TextUtil.fromHexString(msg);
-            } else {
+            }  else {
                 msg = str;
                 data = (str + newline).getBytes();
             }
@@ -328,6 +324,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             spn.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorSendText)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             receiveText.append(spn);
             service.write(data);
+
         } catch (Exception e) {
             onSerialIoError(e);
         }
@@ -338,6 +335,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         for (byte[] data : datas) {
             if (hexEnabled) {
                 spn.append(TextUtil.toHexString(data)).append('\n');
+                handleResponse(TextUtil.toHexString(data).getBytes());
+                //send("0x01"+"0x01"+"0x64"+"0x58"+"0x0A"+"0x01"+"0x07"+"0x01"+"0x00");
             } else {
                 String msg = new String(data);
             }
@@ -345,25 +344,32 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         receiveText.append(spn);
     }
 
-    public void handleResponse(ArrayDeque<byte[]> datas) throws IOException, InterruptedException {
-        SpannableStringBuilder spn = new SpannableStringBuilder();
-        for (byte[] data : datas) {
-            spn.append(TextUtil.toHexString(data)).append('\n');
-            receiveText.append(spn);
+    public void handleResponse(byte[] data) {
+        try {
+                String hexData = TextUtil.toHexString(data);
 
-            if(TextUtil.toHexString(data).contains("")){ // MDB/VMC Success connect
-                send("03FFFF01"); //Command Start a session to MDB
-            } else if (TextUtil.toHexString(data).contains("02303003")){ //After user make a selection
-                send("05006469"); //Approve Selection after payment complete
-            } else if (TextUtil.toHexString(data).contains("")) { //Vend Request Success
-                send("0707"); //Command to mdb to End a Session
-            }
-            else{
-                usbSerialPort.setBreak(true);
-                Thread.sleep(100);
-                status("send BREAK");
-                usbSerialPort.setBreak(false);
-            }
+                // Display the received data
+            SpannableStringBuilder spn = new SpannableStringBuilder(hexData + '\n');
+            spn.setSpan(new ForegroundColorSpan(getResources().getColor(android.R.color.holo_blue_light)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+
+            String[] hexValues = hexData.split(" ");
+
+                        if (hexValues.length >= 6) {
+                            // Check if it's a VEND REQUEST (13 00)
+                            if (hexValues[0].equals("13") && hexValues[1].equals("00")) {
+                                // Extract the item price and selection number
+                                int itemPrice = Integer.parseInt(hexValues[2] + hexValues[3], 16);
+                                int selectionNumber = Integer.parseInt(hexValues[4] + hexValues[5], 16);
+
+                                // Handle the VEND REQUEST
+                                receiveText.append("Received VEND REQUEST:");
+                                receiveText.append("Item Price" + itemPrice);
+                                receiveText.append("Selection Number: " + selectionNumber);
+                            }
+                        }
+        } catch (Exception e) {
+            onSerialIoError(e);
         }
     }
 

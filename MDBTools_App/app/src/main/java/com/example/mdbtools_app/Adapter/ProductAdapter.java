@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mdbtools_app.Model.Product;
 import com.example.mdbtools_app.R;
 
+import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
@@ -32,7 +33,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     private OnItemClickListener listener; // Listener for item click events
 
     public interface OnItemClickListener {
-        void onItemClick(Product product);
+        void onItemClick(Product product) throws IOException, InterruptedException;
     }
 
     public ProductAdapter(Context context, List<Product> productList, OnItemClickListener listener) {
@@ -80,7 +81,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                     if (position != RecyclerView.NO_POSITION) {
                         Product product = productList.get(position);
                         if (listener != null) {
-                            listener.onItemClick(product);
+                            try {
+                                listener.onItemClick(product);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
                     }
                 }

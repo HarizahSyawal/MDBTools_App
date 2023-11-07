@@ -16,7 +16,6 @@ final class TextUtil {
 
     @ColorInt
     static int caretBackground = 0xff666666;
-
     static byte[] fromHexString(final CharSequence s) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         byte b = 0;
@@ -49,6 +48,16 @@ final class TextUtil {
 
     static void toHexString(StringBuilder sb, final byte[] buf) {
         toHexString(sb, buf, 0, buf.length);
+    }
+
+    static String convertToCRLF(String input) {
+        if (input == null) {
+            return null;
+        }
+
+        // Use regular expressions to replace LF with CRLF
+        String crlfText = input.replaceAll("\n", "\r\n");
+        return crlfText;
     }
 
     static void toHexString(StringBuilder sb, final byte[] buf, int begin, int end) {
