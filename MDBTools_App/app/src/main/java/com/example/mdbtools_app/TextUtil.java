@@ -14,8 +14,11 @@ import java.io.ByteArrayOutputStream;
 
 final class TextUtil {
 
-    @ColorInt
-    static int caretBackground = 0xff666666;
+    @ColorInt static int caretBackground = 0xff666666;
+
+    final static String newline_crlf = "\r\n";
+    final static String newline_lf = "\n";
+
     static byte[] fromHexString(final CharSequence s) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         byte b = 0;
@@ -48,16 +51,6 @@ final class TextUtil {
 
     static void toHexString(StringBuilder sb, final byte[] buf) {
         toHexString(sb, buf, 0, buf.length);
-    }
-
-    static String convertToCRLF(String input) {
-        if (input == null) {
-            return null;
-        }
-
-        // Use regular expressions to replace LF with CRLF
-        String crlfText = input.replaceAll("\n", "\r\n");
-        return crlfText;
     }
 
     static void toHexString(StringBuilder sb, final byte[] buf, int begin, int end) {
@@ -160,4 +153,3 @@ final class TextUtil {
     }
 
 }
-

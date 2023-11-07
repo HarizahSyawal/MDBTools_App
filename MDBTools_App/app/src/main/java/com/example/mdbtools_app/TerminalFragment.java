@@ -1,6 +1,8 @@
 package com.example.mdbtools_app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -13,6 +15,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -26,6 +29,8 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,6 +51,7 @@ import com.hoho.android.usbserial.driver.UsbSerialProber;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener{
@@ -67,6 +73,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private String newline = "";
     private RecyclerView recyclerView;
     private ProductAdapter productAdapter;
+    private String productName = "Oronamin C Drink";
+    private double productPrice = 0;
+    private String totalPrice = String.valueOf(productPrice);
+    private int productImage = R.drawable.product2;
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -198,6 +208,60 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         return products;
     }
 
+    private void showCustomDialog(String productName, double productPrice, double totalPrice, int productImage) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        View customLayout = getLayoutInflater().inflate(R.layout.payment_dialog, null);
+
+        // Set the view for the dialog
+        builder.setView(customLayout);
+
+        // Get references to the TextViews and buttons in the custom layout
+        TextView productNameTextView = customLayout.findViewById(R.id.productName);
+        TextView productPriceTextView = customLayout.findViewById(R.id.productPrice);
+        TextView totalPriceTextView = customLayout.findViewById(R.id.totalPrice);
+        ImageView productImageView = customLayout.findViewById(R.id.productImage);
+        Button paymentButton = customLayout.findViewById(R.id.paymentButton);
+        Button cancelButton = customLayout.findViewById(R.id.cancelButton);
+
+        // Set the product information
+        productNameTextView.setText(productName);
+        productPriceTextView.setText("Price: $" + String.format("%.2f", productPrice));
+        totalPriceTextView.setText("Total: $" + String.format("%.2f", totalPrice));
+        productImageView.setImageResource(R.drawable.product2);
+
+        // Create and show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Set click listeners for the buttons
+        paymentButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Send the first command
+                send("05006469");
+
+                // Create a handler to send the second command after a delay
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Send the second command after the delay
+                        send("0707");
+                    }
+                }, 5000); // Delay in milliseconds (e.g., 1000ms = 1 second)
+
+                // Dismiss the dialog
+                dialog.dismiss();
+            }
+        });
+
+        cancelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                send("0606");
+                dialog.dismiss();
+            }
+        });
+    }
     @Override
     public void onItemClick(Product product) throws IOException, InterruptedException {
         send("0300003");
@@ -211,11 +275,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
+
         if (id == R.id.clear) {
             receiveText.setText("");
             return true;
-        } else if (id == R.id.responsePayment) {
-            send("05006469");
+        } else if (id == R.id.showPaymentDialog) {
+            showCustomDialog(productName, productPrice, Double.parseDouble(totalPrice), productImage);
             return true;
         }
         else if (id == R.id.sendBreak) {
@@ -330,28 +395,31 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
+//    private void receive(ArrayDeque<byte[]> datas) {
+//        SpannableStringBuilder spn = new SpannableStringBuilder();
+//        for (byte[] data : datas) {
+//                spn.append(TextUtil.toHexString(data)).append('\n');
+//        }
+//        receiveText.append(spn);
+//    }
+
     private void receive(ArrayDeque<byte[]> datas) {
         SpannableStringBuilder spn = new SpannableStringBuilder();
         for (byte[] data : datas) {
-            if (hexEnabled) {
-                spn.append(TextUtil.toHexString(data)).append('\n');
-                handleResponse(TextUtil.toHexString(data).getBytes());
-                //send("0x01"+"0x01"+"0x64"+"0x58"+"0x0A"+"0x01"+"0x07"+"0x01"+"0x00");
-            } else {
-                String msg = new String(data);
-            }
+            String msg = new String(data);
+            spn.append(TextUtil.toCaretString(msg, newline.length() != 0));
+             handleResponse(msg.getBytes());
         }
-        receiveText.append(spn);
+        receiveText.append(spn+TextUtil.newline_crlf);
     }
 
     public void handleResponse(byte[] data) {
         try {
-                String hexData = TextUtil.toHexString(data);
-
+            String hexData = TextUtil.toHexString(data);
+            receiveText.append("Received VEND REQUEST:"+data);
                 // Display the received data
             SpannableStringBuilder spn = new SpannableStringBuilder(hexData + '\n');
             spn.setSpan(new ForegroundColorSpan(getResources().getColor(android.R.color.holo_blue_light)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
 
             String[] hexValues = hexData.split(" ");
 
@@ -362,10 +430,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                                 int itemPrice = Integer.parseInt(hexValues[2] + hexValues[3], 16);
                                 int selectionNumber = Integer.parseInt(hexValues[4] + hexValues[5], 16);
 
+                                showCustomDialog("Total: MYR" + itemPrice, Double.parseDouble("Price: MYR" + itemPrice), selectionNumber, R.drawable.product2);
+
                                 // Handle the VEND REQUEST
                                 receiveText.append("Received VEND REQUEST:");
                                 receiveText.append("Item Price" + itemPrice);
                                 receiveText.append("Selection Number: " + selectionNumber);
+
                             }
                         }
         } catch (Exception e) {
