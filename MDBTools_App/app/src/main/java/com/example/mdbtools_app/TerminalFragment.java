@@ -54,9 +54,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener{
+public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener {
 
-    enum Connected { False, Pending, True }
+    enum Connected {False, Pending, True}
 
     private final BroadcastReceiver broadcastReceiver;
     private int deviceId, portNum, baudRate;
@@ -73,16 +73,18 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private String newline = "";
     private RecyclerView recyclerView;
     private ProductAdapter productAdapter;
-    private String productName = "Oronamin C Drink";
-    private double productPrice = 0;
-    private String totalPrice = String.valueOf(productPrice);
     private int productImage = R.drawable.product2;
+
+
+    private boolean is13Found = false;
+    private boolean is00Found = false;
+    private ArrayList<Byte> dataBuffer = new ArrayList<>();
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if(Constants.INTENT_ACTION_GRANT_USB.equals(intent.getAction())) {
+                if (Constants.INTENT_ACTION_GRANT_USB.equals(intent.getAction())) {
                     Boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
                     connect(granted);
                 }
@@ -114,7 +116,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onStart() {
         super.onStart();
-        if(service != null)
+        if (service != null)
             service.attach(this);
         else
             getActivity().startService(new Intent(getActivity(), SerialService.class)); // prevents service destroy on unbind from recreated activity caused by orientation change
@@ -122,12 +124,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     @Override
     public void onStop() {
-        if(service != null && !getActivity().isChangingConfigurations())
+        if (service != null && !getActivity().isChangingConfigurations())
             service.detach();
         super.onStop();
     }
 
-    @SuppressWarnings("deprecation") // onAttach(context) was added with API 23. onAttach(activity) works for all API versions
+    @SuppressWarnings("deprecation")
+    // onAttach(context) was added with API 23. onAttach(activity) works for all API versions
     @Override
     public void onAttach(@NonNull Activity activity) {
         super.onAttach(activity);
@@ -136,7 +139,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     @Override
     public void onDetach() {
-        try { getActivity().unbindService(this); } catch(Exception ignored) {}
+        try {
+            getActivity().unbindService(this);
+        } catch (Exception ignored) {
+        }
         super.onDetach();
     }
 
@@ -144,7 +150,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onResume() {
         super.onResume();
         getActivity().registerReceiver(broadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_GRANT_USB));
-        if(initialStart && service != null) {
+        if (initialStart && service != null) {
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
         }
@@ -160,7 +166,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onServiceConnected(ComponentName name, IBinder binder) {
         service = ((SerialService.SerialBinder) binder).getService();
         service.attach(this);
-        if(initialStart && isResumed()) {
+        if (initialStart && isResumed()) {
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
         }
@@ -200,10 +206,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private List<Product> generateSampleProductList() {
         List<Product> products = new ArrayList<>();
-        products.add(new Product("Pocari Sweat", "$9.99", R.drawable.product1));
-        products.add(new Product("Oronamin C", "$19.99", R.drawable.product2));
-        products.add(new Product("Oronamin C", "$15.99", R.drawable.product2));
-        products.add(new Product("Pocari Sweat", "$22.99", R.drawable.product1));
+        products.add(new Product("Pocari Sweat", "MYR9.99", R.drawable.product1));
+        products.add(new Product("Oronamin C", "MYR19.99", R.drawable.product2));
+        products.add(new Product("Oronamin C", "MYR15.99", R.drawable.product2));
+        products.add(new Product("Pocari Sweat", "MYR22.99", R.drawable.product1));
         // Add more products as needed
         return products;
     }
@@ -225,8 +231,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         // Set the product information
         productNameTextView.setText(productName);
-        productPriceTextView.setText("Price: $" + String.format("%.2f", productPrice));
-        totalPriceTextView.setText("Total: $" + String.format("%.2f", totalPrice));
+        productPriceTextView.setText("Price: MYR" + String.format("%.2f", productPrice));
+        totalPriceTextView.setText("Total: MYR" + String.format("%.2f", totalPrice));
         productImageView.setImageResource(R.drawable.product2);
 
         // Create and show the dialog
@@ -262,6 +268,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
         });
     }
+
     @Override
     public void onItemClick(Product product) throws IOException, InterruptedException {
         send("0300003");
@@ -280,10 +287,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.setText("");
             return true;
         } else if (id == R.id.showPaymentDialog) {
-            showCustomDialog(productName, productPrice, Double.parseDouble(totalPrice), productImage);
+//            showCustomDialog(productName, productPrice, Double.parseDouble(totalPrice), productImage);
             return true;
-        }
-        else if (id == R.id.sendBreak) {
+        } else if (id == R.id.sendBreak) {
             try {
                 usbSerialPort.setBreak(true);
                 Thread.sleep(100);
@@ -307,35 +313,35 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private void connect(Boolean permissionGranted) {
         UsbDevice device = null;
-            UsbManager usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
-        for(UsbDevice v : usbManager.getDeviceList().values())
-            if(v.getDeviceId() == deviceId)
+        UsbManager usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
+        for (UsbDevice v : usbManager.getDeviceList().values())
+            if (v.getDeviceId() == deviceId)
                 device = v;
-        if(device == null) {
+        if (device == null) {
             status("connection failed: device not found");
             return;
         }
         UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
-        if(driver == null) {
+        if (driver == null) {
             driver = CustomProber.getCustomProber().probeDevice(device);
         }
-        if(driver == null) {
+        if (driver == null) {
             status("connection failed: no driver for device");
             return;
         }
-        if(driver.getPorts().size() < portNum) {
+        if (driver.getPorts().size() < portNum) {
             status("connection failed: not enough ports at device");
             return;
         }
         usbSerialPort = driver.getPorts().get(portNum);
         UsbDeviceConnection usbConnection = usbManager.openDevice(driver.getDevice());
-        if(usbConnection == null && permissionGranted == null && !usbManager.hasPermission(driver.getDevice())) {
+        if (usbConnection == null && permissionGranted == null && !usbManager.hasPermission(driver.getDevice())) {
             int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_MUTABLE : 0;
             PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(getActivity(), 0, new Intent(Constants.INTENT_ACTION_GRANT_USB), flags);
             usbManager.requestPermission(driver.getDevice(), usbPermissionIntent);
             return;
         }
-        if(usbConnection == null) {
+        if (usbConnection == null) {
             if (!usbManager.hasPermission(driver.getDevice()))
                 status("connection failed: permission denied");
             else
@@ -368,20 +374,20 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     void send(String str) {
-        if(connected != Connected.True) {
+        if (connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
             String msg;
             byte[] data;
-            if(hexEnabled) {
+            if (hexEnabled) {
                 StringBuilder sb = new StringBuilder();
                 TextUtil.toHexString(sb, TextUtil.fromHexString(str));
                 TextUtil.toHexString(sb, newline.getBytes());
                 msg = sb.toString();
                 data = TextUtil.fromHexString(msg);
-            }  else {
+            } else {
                 msg = str;
                 data = (str + newline).getBytes();
             }
@@ -395,51 +401,32 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
-//    private void receive(ArrayDeque<byte[]> datas) {
-//        SpannableStringBuilder spn = new SpannableStringBuilder();
-//        for (byte[] data : datas) {
-//                spn.append(TextUtil.toHexString(data)).append('\n');
-//        }
-//        receiveText.append(spn);
-//    }
-
     private void receive(ArrayDeque<byte[]> datas) {
         SpannableStringBuilder spn = new SpannableStringBuilder();
         for (byte[] data : datas) {
             String msg = new String(data);
-            spn.append(TextUtil.toCaretString(msg, newline.length() != 0));
-             handleResponse(msg.getBytes());
+            handleResponse(msg);
+            spn.append(msg);
         }
-        receiveText.append(spn+TextUtil.newline_crlf);
+        receiveText.append("VMC RESPONSE :"+spn+TextUtil.newline_lf);
     }
-
-    public void handleResponse(byte[] data) {
+    public void handleResponse(String data) {
+        String vendResponse = data;
         try {
-            String hexData = TextUtil.toHexString(data);
-            receiveText.append("Received VEND REQUEST:"+data);
-                // Display the received data
-            SpannableStringBuilder spn = new SpannableStringBuilder(hexData + '\n');
-            spn.setSpan(new ForegroundColorSpan(getResources().getColor(android.R.color.holo_blue_light)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            //13 00 indicate vend request
+            if (vendResponse.contains("1300")) {
 
-            String[] hexValues = hexData.split(" ");
+//                int itemPrice = Integer.parseInt(vendRequest[2] + vendRequest[3], 16);
+//                int selectionNumber = Integer.parseInt(vendRequest[4] + vendRequest[5], 16);
 
-                        if (hexValues.length >= 6) {
-                            // Check if it's a VEND REQUEST (13 00)
-                            if (hexValues[0].equals("13") && hexValues[1].equals("00")) {
-                                // Extract the item price and selection number
-                                int itemPrice = Integer.parseInt(hexValues[2] + hexValues[3], 16);
-                                int selectionNumber = Integer.parseInt(hexValues[4] + hexValues[5], 16);
+//                showCustomDialog("Oronamin C" + selectionNumber, "Price: MYR" + itemPrice,"Total Price: MYR" + itemPrice, R.drawable.product2);
 
-                                showCustomDialog("Total: MYR" + itemPrice, Double.parseDouble("Price: MYR" + itemPrice), selectionNumber, R.drawable.product2);
-
-                                // Handle the VEND REQUEST
-                                receiveText.append("Received VEND REQUEST:");
-                                receiveText.append("Item Price" + itemPrice);
-                                receiveText.append("Selection Number: " + selectionNumber);
-
-                            }
-                        }
-        } catch (Exception e) {
+                showCustomDialog("Oronamin C", 4,4, R.drawable.product2);
+            } else {
+                receiveText.append("USER HAVEN'T MAKE A SELECTION ");
+            }
+        }
+        catch (Exception e) {
             onSerialIoError(e);
         }
     }
