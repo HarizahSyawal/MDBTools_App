@@ -15,9 +15,6 @@
         android:theme="@style/Theme.MDBTools_App"
         tools:targetApi="31">
         <activity
-            android:name=".VMCScreen"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

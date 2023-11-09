@@ -76,10 +76,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private int productImage = R.drawable.product2;
 
 
-    private boolean is13Found = false;
-    private boolean is00Found = false;
-    private ArrayList<Byte> dataBuffer = new ArrayList<>();
-
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -214,7 +210,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         return products;
     }
 
-    private void showCustomDialog(String productName, double productPrice, double totalPrice, int productImage) {
+    private void showCustomDialog(String productName, String productPrice, String totalPrice, int productImage) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         View customLayout = getLayoutInflater().inflate(R.layout.payment_dialog, null);
 
@@ -412,16 +408,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
     public void handleResponse(String data) {
         String vendResponse = data;
+
         try {
             //13 00 indicate vend request
             if (vendResponse.contains("1300")) {
 
-//                int itemPrice = Integer.parseInt(vendRequest[2] + vendRequest[3], 16);
-//                int selectionNumber = Integer.parseInt(vendRequest[4] + vendRequest[5], 16);
+//                receiveText.append("CHECK LENGHT OF DATA :" + vendResponse.length());
 
-//                showCustomDialog("Oronamin C" + selectionNumber, "Price: MYR" + itemPrice,"Total Price: MYR" + itemPrice, R.drawable.product2);
-
-                showCustomDialog("Oronamin C", 4,4, R.drawable.product2);
+                showCustomDialog("Oronamin C", "4","4", R.drawable.product2);
+//                showCustomDialog("Oronamin C" + vendResponse, "Price: MYR" + vendResponse,"Total Price: MYR" + vendResponse, R.drawable.product2);
             } else {
                 receiveText.append("USER HAVEN'T MAKE A SELECTION ");
             }
@@ -443,6 +438,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onSerialConnect() {
         status("connected");
+        Toast.makeText(getActivity(),  "vmc connected", Toast.LENGTH_SHORT).show();
+
         connected = Connected.True;
     }
 
@@ -466,7 +463,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onSerialIoError(Exception e) {
         status("connection lost: " + e.getMessage());
+        Toast.makeText(getActivity(),  "connection lost :"+e.getMessage(), Toast.LENGTH_SHORT).show();
         disconnect();
     }
-
 }

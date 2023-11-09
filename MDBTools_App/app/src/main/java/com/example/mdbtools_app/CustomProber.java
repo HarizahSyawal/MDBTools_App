@@ -11,6 +11,5 @@ class CustomProber {
         customTable.addProduct(0x1234, 0xabcd, FtdiSerialDriver.class); // e.g. device with custom VID+PID
         return new UsbSerialProber(customTable);
     }
-
 }
 
