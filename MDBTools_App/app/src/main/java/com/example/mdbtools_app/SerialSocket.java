@@ -12,6 +12,7 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
 
 public class SerialSocket implements SerialInputOutputManager.Listener {
@@ -26,6 +27,7 @@ public class SerialSocket implements SerialInputOutputManager.Listener {
     private UsbDeviceConnection connection;
     private UsbSerialPort serialPort;
     private SerialInputOutputManager ioManager;
+    private String readBuffer = "";
 
     SerialSocket(Context context, UsbDeviceConnection connection, UsbSerialPort serialPort) {
         if(context instanceof Activity)

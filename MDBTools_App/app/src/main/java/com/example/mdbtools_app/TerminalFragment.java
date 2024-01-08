@@ -53,16 +53,15 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener {
-
     enum Connected {False, Pending, True}
-
+    private static final String TAG = "TERMINAL FRAGMENT";
     private final BroadcastReceiver broadcastReceiver;
     private int deviceId, portNum, baudRate;
     private UsbSerialPort usbSerialPort;
     private SerialService service;
-
     private TextView receiveText;
     private TextView sendText;
     private TextUtil.HexWatcher hexWatcher;
@@ -74,6 +73,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private RecyclerView recyclerView;
     private ProductAdapter productAdapter;
     private int productImage = R.drawable.product2;
+    private StringBuilder mVMMessageSB = new StringBuilder();
 
 
     public TerminalFragment() {
@@ -282,8 +282,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (id == R.id.clear) {
             receiveText.setText("");
             return true;
-        } else if (id == R.id.showPaymentDialog) {
-//            showCustomDialog(productName, productPrice, Double.parseDouble(totalPrice), productImage);
+        } else if (id == R.id.paymentButton) {
+            send("05006469");
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    send("0707");
+                }
+            }, 3000);
             return true;
         } else if (id == R.id.sendBreak) {
             try {
@@ -398,31 +404,24 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     private void receive(ArrayDeque<byte[]> datas) {
-        SpannableStringBuilder spn = new SpannableStringBuilder();
+
+        char STX = '\u0002'; // Start of Text
+        char ETX = '\u0003'; // End of Text
+
         for (byte[] data : datas) {
             String msg = new String(data);
-            handleResponse(msg);
-            spn.append(msg);
-        }
-        receiveText.append("VMC RESPONSE :"+spn+TextUtil.newline_lf);
-    }
-    public void handleResponse(String data) {
-        String vendResponse = data;
+            String messageWithoutSTXETX = msg.replace(STX, ' ').replace(ETX, ' ').trim();
+            mVMMessageSB.append(messageWithoutSTXETX);
 
-        try {
-            //13 00 indicate vend request
-            if (vendResponse.contains("1300")) {
-
-//                receiveText.append("CHECK LENGHT OF DATA :" + vendResponse.length());
-
-                showCustomDialog("Oronamin C", "4","4", R.drawable.product2);
-//                showCustomDialog("Oronamin C" + vendResponse, "Price: MYR" + vendResponse,"Total Price: MYR" + vendResponse, R.drawable.product2);
-            } else {
-                receiveText.append("USER HAVEN'T MAKE A SELECTION ");
+            char lastChar = msg.charAt(msg.length() - 1);
+            if (lastChar == ETX) {
+//            handleReceivedMessage(mVMMessageSB.toString());
+                mVMMessageSB = new StringBuilder();
             }
-        }
-        catch (Exception e) {
-            onSerialIoError(e);
+
+            if (msg.contains("140115") && msg.contains("303221")) {
+                Log.d(TAG, "VEND FAILURE");
+            }
         }
     }
 
