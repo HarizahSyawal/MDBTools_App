@@ -2,7 +2,6 @@ package com.example.mdbtools_app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -26,12 +25,10 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,7 +36,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mdbtools_app.Adapter.ProductAdapter;
@@ -49,14 +45,15 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener {
     enum Connected {False, Pending, True}
+
     private static final String TAG = "TERMINAL FRAGMENT";
     private final BroadcastReceiver broadcastReceiver;
     private int deviceId, portNum, baudRate;
@@ -68,11 +65,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private Connected connected = Connected.False;
     private boolean initialStart = true;
-    private boolean hexEnabled = true;
+    private boolean hexEnabled = false;
     private String newline = "";
     private RecyclerView recyclerView;
     private ProductAdapter productAdapter;
-    private int productImage = R.drawable.product2;
+    private int itemSelection;
     private StringBuilder mVMMessageSB = new StringBuilder();
 
 
@@ -184,10 +181,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         sendText = view.findViewById(R.id.send_text);
-        hexWatcher = new TextUtil.HexWatcher(sendText);
-        hexWatcher.enable(hexEnabled);
-        sendText.addTextChangedListener(hexWatcher);
-        sendText.setHint(hexEnabled ? "HEX mode" : "");
 
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
@@ -202,72 +195,44 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private List<Product> generateSampleProductList() {
         List<Product> products = new ArrayList<>();
-        products.add(new Product("Pocari Sweat", "MYR9.99", R.drawable.product1));
-        products.add(new Product("Oronamin C", "MYR19.99", R.drawable.product2));
-        products.add(new Product("Oronamin C", "MYR15.99", R.drawable.product2));
-        products.add(new Product("Pocari Sweat", "MYR22.99", R.drawable.product1));
+        products.add(new Product(1, "Coffee Latte", "MYR9.99", R.drawable.product1));
+        products.add(new Product(2, "Cappucino", "MYR10.99", R.drawable.product1));
+        products.add(new Product(3, "Americano", "MYR10.99", R.drawable.product2));
+        products.add(new Product(4, "White Coffee", "MYR12.99", R.drawable.product1));
         // Add more products as needed
         return products;
     }
 
-    private void showCustomDialog(String productName, String productPrice, String totalPrice, int productImage) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        View customLayout = getLayoutInflater().inflate(R.layout.payment_dialog, null);
-
-        // Set the view for the dialog
-        builder.setView(customLayout);
-
-        // Get references to the TextViews and buttons in the custom layout
-        TextView productNameTextView = customLayout.findViewById(R.id.productName);
-        TextView productPriceTextView = customLayout.findViewById(R.id.productPrice);
-        TextView totalPriceTextView = customLayout.findViewById(R.id.totalPrice);
-        ImageView productImageView = customLayout.findViewById(R.id.productImage);
-        Button paymentButton = customLayout.findViewById(R.id.paymentButton);
-        Button cancelButton = customLayout.findViewById(R.id.cancelButton);
-
-        // Set the product information
-        productNameTextView.setText(productName);
-        productPriceTextView.setText("Price: MYR" + String.format("%.2f", productPrice));
-        totalPriceTextView.setText("Total: MYR" + String.format("%.2f", totalPrice));
-        productImageView.setImageResource(R.drawable.product2);
-
-        // Create and show the dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
-
-        // Set click listeners for the buttons
-        paymentButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // Send the first command
-                send("05006469");
-
-                // Create a handler to send the second command after a delay
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Send the second command after the delay
-                        send("0707");
-                    }
-                }, 5000); // Delay in milliseconds (e.g., 1000ms = 1 second)
-
-                // Dismiss the dialog
-                dialog.dismiss();
-            }
-        });
-
-        cancelButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                send("0606");
-                dialog.dismiss();
-            }
-        });
-    }
-
     @Override
     public void onItemClick(Product product) throws IOException, InterruptedException {
-        send("0300003");
+//        String command = TextUtil.addSpacesBetweenCharacters("#S1");
+        String command = "#S1";
+        String finalMsg = "";
+
+        if (product.getId() == 1) {
+            itemSelection = product.getId();
+            int chk = calculateCHK(command);
+            int totalChk = itemSelection+chk;
+
+            finalMsg = TextUtil.addSpacesBetweenCharacters(command+TextUtil.convertToHex(itemSelection)+TextUtil.convertToHex(totalChk));
+
+            send(finalMsg);
+        } else if (product.getId() == 2) {
+            itemSelection = product.getId();
+            int chk = calculateCHK(command);
+
+            send(command);
+        } else if (product.getId() == 3) {
+            itemSelection = product.getId();
+            int chk = calculateCHK(command);
+
+            send(command);
+        } else if (product.getId() == 4) {
+            itemSelection = product.getId();
+            int chk = calculateCHK(command);
+
+            send(command);
+        }
     }
 
     @Override
@@ -283,11 +248,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.setText("");
             return true;
         } else if (id == R.id.paymentButton) {
-            send("05006469");
+            send("S2");
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    send("0707");
+                    send("");
                 }
             }, 3000);
             return true;
@@ -375,53 +340,133 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         usbSerialPort = null;
     }
 
-    void send(String str) {
+    void send(String message) {
         if (connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
-            String msg;
             byte[] data;
-            if (hexEnabled) {
-                StringBuilder sb = new StringBuilder();
-                TextUtil.toHexString(sb, TextUtil.fromHexString(str));
-                TextUtil.toHexString(sb, newline.getBytes());
-                msg = sb.toString();
-                data = TextUtil.fromHexString(msg);
-            } else {
-                msg = str;
-                data = (str + newline).getBytes();
-            }
-            SpannableStringBuilder spn = new SpannableStringBuilder(msg + '\n');
-            spn.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorSendText)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            receiveText.append(spn);
-            service.write(data);
+            data = (message).getBytes();
 
+            service.write(data);
         } catch (Exception e) {
             onSerialIoError(e);
         }
     }
 
+    private int calculateCHK(String message) {
+        int sum = 0;
+        for (int i = 0; i < message.length(); i++) {
+            char c = message.charAt(i);
+            int asciiValue = (int) c;
+            sum += asciiValue;
+        }
+        return sum;
+    }
+
+//    private void receive(ArrayDeque<byte[]> datas) {
+//
+//        char STX = '\u0002'; // Start of Text
+//        char ETX = '\u0003'; // End of Text
+//
+//        for (byte[] data : datas) {
+//            String msg = new String(data);
+//            String messageWithoutSTXETX = msg.replace(STX, ' ').replace(ETX, ' ').trim();
+//            mVMMessageSB.append(messageWithoutSTXETX);
+//
+//            char lastChar = msg.charAt(msg.length() - 1);
+//            if (lastChar == ETX) {
+//                handleReceivedMessage(mVMMessageSB.toString());
+//                mVMMessageSB = new StringBuilder();
+//            }
+//        }
+//    }
+
     private void receive(ArrayDeque<byte[]> datas) {
 
-        char STX = '\u0002'; // Start of Text
-        char ETX = '\u0003'; // End of Text
-
         for (byte[] data : datas) {
-            String msg = new String(data);
-            String messageWithoutSTXETX = msg.replace(STX, ' ').replace(ETX, ' ').trim();
-            mVMMessageSB.append(messageWithoutSTXETX);
+            String msg = new String(data, StandardCharsets.US_ASCII);
 
-            char lastChar = msg.charAt(msg.length() - 1);
-            if (lastChar == ETX) {
-//            handleReceivedMessage(mVMMessageSB.toString());
-                mVMMessageSB = new StringBuilder();
-            }
+            // Process the ASCII message as needed
+            handleReceivedMessage(msg);
+        }
+    }
 
-            if (msg.contains("140115") && msg.contains("303221")) {
-                Log.d(TAG, "VEND FAILURE");
+    public void handleReceivedMessage(String data) {
+        Log.d(TAG, "[{}] handleReceivedMessage: [{}]" + data);
+
+        if (null == data) {
+            receiveText.append("command is null");
+            Log.d(TAG, "VMC Command is null !!!");
+        } else {
+            String command = data;
+            if (command.equalsIgnoreCase("C2")){
+
+                receiveText.append("Received get selection availability");
             }
+            else if (command.equalsIgnoreCase("S1")){
+
+                receiveText.append("Received Start a selection command");
+            }
+            else if (command.equalsIgnoreCase("S2")){
+                receiveText.append("Received Query Selection Status command");
+                handleSelectionStatus(data);
+            }
+            else if (command.equalsIgnoreCase("S3")){
+
+                receiveText.append("Received Selection already paid command");
+            }
+            else if (command.equalsIgnoreCase("S4")){
+                receiveText.append("Send button press command receive");
+            }
+            else if (command.equalsIgnoreCase("S5")){
+                command = data.substring(1,2);
+                if (command.equalsIgnoreCase("0x00")){
+                    receiveText.append("Unlock the machine command receive"+command);
+                }else {
+                    receiveText.append("lockk the machine command receive"+command);
+                }
+            }
+            else if (command.equalsIgnoreCase("S6")){
+                command = data.substring(1,2);
+                if (command.equalsIgnoreCase("0x00")){
+                receiveText.append("Received display text on screen command"+command);
+                }else {
+                    receiveText.append("Error displaying text on screen"+command);
+                }
+            }
+            else if (command.equalsIgnoreCase("S7")){
+                command = data.substring(1,2);
+                if (command.equalsIgnoreCase("0x01")){
+                    receiveText.append("Received Enabled Selection"+command);
+                }else {
+                    receiveText.append("Received Disabled Selection"+command);
+                }
+            }
+            else if (command.equalsIgnoreCase("S8")){
+                receiveText.append("Received extended selection command"+command);
+            }
+        }
+    }
+
+    private void handleSelectionStatus(String data) {
+        String command = data.substring(1,2);
+        if (command.equalsIgnoreCase("0x01")){
+            receiveText.append("Waiting for payment"+command);
+        }
+        else if (command.equalsIgnoreCase("0x02")){
+            receiveText.append("delivering in progress, STOP button is not available"+command);
+        }
+        else if (command.equalsIgnoreCase("0x03")){
+            receiveText.append("Finished KO"+command);
+        }
+        else if (command.equalsIgnoreCase("0x04")){
+            receiveText.append("Finished OK"+command);
+        }
+        else if (command.equalsIgnoreCase("0x05")){
+            receiveText.append("delivering in progress, STOP button is available"+command);
+
         }
     }
 
@@ -453,6 +498,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         ArrayDeque<byte[]> datas = new ArrayDeque<>();
         datas.add(data);
         receive(datas);
+        receiveText.append((CharSequence) datas);
     }
 
     public void onSerialRead(ArrayDeque<byte[]> datas) {

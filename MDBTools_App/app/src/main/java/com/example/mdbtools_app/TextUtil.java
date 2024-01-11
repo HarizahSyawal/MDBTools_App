@@ -39,6 +39,23 @@ final class TextUtil {
         return buf.toByteArray();
     }
 
+    static String addSpacesBetweenCharacters(String message) {
+        StringBuilder formattedMessage = new StringBuilder();
+        for (int i = 0; i < message.length(); i++) {
+            formattedMessage.append(message.charAt(i));
+
+            // Add space after each character except the last one
+            if (i < message.length() - 1) {
+                formattedMessage.append(' ');
+            }
+        }
+        return formattedMessage.toString();
+    }
+
+     static String convertToHex(int decimalValue) {
+        return String.format("0x%02X", decimalValue);
+    }
+
     static String toHexString(final byte[] buf) {
         return toHexString(buf, 0, buf.length);
     }
