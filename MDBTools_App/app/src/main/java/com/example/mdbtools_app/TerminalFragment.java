@@ -205,34 +205,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     @Override
     public void onItemClick(Product product) throws IOException, InterruptedException {
-//        String command = TextUtil.addSpacesBetweenCharacters("#S1");
         String command = "#S1";
-        String finalMsg = "";
+        itemSelection = product.getId();
 
-        if (product.getId() == 1) {
-            itemSelection = product.getId();
-            int chk = calculateCHK(command);
-            int totalChk = itemSelection+chk;
+        int chk = calculateCHK(command);
+        int totalChk = itemSelection + chk;
 
-            finalMsg = TextUtil.addSpacesBetweenCharacters(command+TextUtil.convertToHex(itemSelection)+TextUtil.convertToHex(totalChk));
+        String finalMsg = command+TextUtil.convertToHex(itemSelection).trim() + TextUtil.convertToHex(totalChk).trim();
 
-            send(finalMsg);
-        } else if (product.getId() == 2) {
-            itemSelection = product.getId();
-            int chk = calculateCHK(command);
-
-            send(command);
-        } else if (product.getId() == 3) {
-            itemSelection = product.getId();
-            int chk = calculateCHK(command);
-
-            send(command);
-        } else if (product.getId() == 4) {
-            itemSelection = product.getId();
-            int chk = calculateCHK(command);
-
-            send(command);
-        }
+        send(finalMsg);
     }
 
     @Override
@@ -498,7 +479,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         ArrayDeque<byte[]> datas = new ArrayDeque<>();
         datas.add(data);
         receive(datas);
-        receiveText.append((CharSequence) datas);
     }
 
     public void onSerialRead(ArrayDeque<byte[]> datas) {
