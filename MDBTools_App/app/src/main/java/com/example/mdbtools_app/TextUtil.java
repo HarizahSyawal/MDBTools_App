@@ -39,21 +39,24 @@ final class TextUtil {
         return buf.toByteArray();
     }
 
-    static String addSpacesBetweenCharacters(String message) {
-        StringBuilder formattedMessage = new StringBuilder();
-        for (int i = 0; i < message.length(); i++) {
-            formattedMessage.append(message.charAt(i));
-
-            // Add space after each character except the last one
-            if (i < message.length() - 1) {
-                formattedMessage.append(' ');
-            }
-        }
-        return formattedMessage.toString();
-    }
-
      static String convertToHex(int decimalValue) {
         return String.format("0x%02X", decimalValue);
+    }
+
+    static String getLSBMSB(int decimalValue) {
+        byte LSB = getLSB(decimalValue);
+        byte MSB = getMSB(decimalValue);
+        String finalValue = String.valueOf(LSB+""+MSB);
+
+        return finalValue;
+    }
+
+    static byte getLSB(int value) {
+        return (byte) (value & 0xFF);
+    }
+
+    static byte getMSB(int value) {
+        return (byte) ((value >> 8) & 0xFF);
     }
 
     static String toHexString(final byte[] buf) {
@@ -169,4 +172,13 @@ final class TextUtil {
         }
     }
 
+    static int calculateCHK(String message) {
+        int sum = 0;
+        for (int i = 0; i < message.length(); i++) {
+            char c = message.charAt(i);
+            int asciiValue = (int) c;
+            sum += asciiValue;
+        }
+        return sum;
+    }
 }
