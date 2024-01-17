@@ -10,11 +10,13 @@ final class laRheaCommands {
     private static int lsbMsb;
 
     static String startSelection(int itemSelection){
+//        String chk2;
+//        command = Constants.START_SELECTION+itemSelection;
+//        chk2 = TextUtil.calculateCHK2(command);
         command = Constants.START_SELECTION;
         chk = TextUtil.calculateCHK(command);
         totalChk = itemSelection + chk;
-        finalMsg = command+TextUtil.convertToHex(itemSelection).trim() + TextUtil.convertToHex(totalChk).trim();
-
+        finalMsg = command+ itemSelection + TextUtil.convertToHex(totalChk).trim();
         // '#' 'S' '1' 0x05{item selection} , 0xAC{total checksum in hex}
         return finalMsg;
     }
@@ -33,7 +35,7 @@ final class laRheaCommands {
         lsbMsb = Integer.parseInt(TextUtil.getLSBMSB(Integer.parseInt(finalItemPrice)));
         command = Constants.SELECTION_ALREADY_PAID+itemSelection+finalItemPrice+lsbMsb;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = command+TextUtil.convertToHex(itemSelection).trim() + TextUtil.convertToHex(chk).trim();
+        finalMsg = command+itemSelection + TextUtil.convertToHex(chk).trim();
 
         // # S 3 [sel_num] [price16 LSB-MSB] [ck]
         return finalMsg;

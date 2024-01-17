@@ -71,7 +71,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private ProductAdapter productAdapter;
     private int itemSelection;
     private String itemPrice;
+    private int lockButtonStop = 1;
+    private int unlockButtonStop = 2;
     private StringBuilder mVMMessageSB = new StringBuilder();
+    private boolean mIsTransactionProcessing = false;
+    private boolean mIsDispensingComplete = false;
+    private boolean mIsCustomSelectionDone = false;
+
 
 
     public TerminalFragment() {
@@ -196,10 +202,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private List<Product> generateSampleProductList() {
         List<Product> products = new ArrayList<>();
-        products.add(new Product(1, "Coffee Latte", "MYR9.99", R.drawable.product1));
-        products.add(new Product(2, "Cappucino", "MYR10.99", R.drawable.product1));
-        products.add(new Product(3, "Americano", "MYR10.99", R.drawable.product2));
-        products.add(new Product(4, "White Coffee", "MYR12.99", R.drawable.product1));
+        products.add(new Product(1, "Coffee Latte", "7", R.drawable.product1));
+        products.add(new Product(2, "Cappucino", "7", R.drawable.product1));
+        products.add(new Product(3, "Americano", "3", R.drawable.product2));
+        products.add(new Product(4, "White Coffee", "6", R.drawable.product1));
         // Add more products as needed
         return products;
     }
@@ -208,9 +214,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onItemClick(Product product) throws IOException, InterruptedException {
         itemSelection = product.getId();
         itemPrice = product.getPrice();
-        String finalMsg = laRheaCommands.startSelection(itemSelection);
 
-        send(finalMsg);
+        send(laRheaCommands.startSelection(itemSelection));
     }
 
     @Override
@@ -226,14 +231,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.setText("");
             return true;
         } else if (id == R.id.paymentButton) {
-//            String finalMsg = laRheaCommands.alreadyPaidSelection(itemSelection, itemPrice);
-//            send(finalMsg);
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    send(laRheaCommands.querySelectionStatus());
-                }
-            }, 3000);
+            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
             return true;
         } else if (id == R.id.sendBreak) {
             try {
@@ -326,15 +324,16 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
 
         try {
-            byte [] data = {
-                    23 ,41 ,1, 95
-            };
-            receiveText.append(newline+message+"                Length of bytes :"+message.length()+"\n\r");
-            receiveText.append(newline+ Arrays.toString(data) +"\n\r");
+//            byte[] byteArray = new byte[message.length()];
+//            for (int i = 0; i < message.length(); i++) {
+//                byteArray[i] = (byte) message.charAt(i);
+//            }
+//            byte [] data = {
+//                    23 ,41 ,1, 95
+//            };
+            receiveText.append(newline+message+"                    Length of bytes :"+message.length()+"\n\r");
 //            receiveText.append(newline+Arrays.toString(message.toCharArray())+"\n\r");
-            Log.d(TAG, "MESSAGE SENT : "+message);
-            service.write(data);
-//            service.write(message.getBytes());
+            service.write(message.getBytes());
         } catch (Exception e) {
             onSerialIoError(e);
         }
@@ -380,7 +379,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
             else if (command.equalsIgnoreCase("#S1")){
                 receiveText.append("Received Start a selection command");
-                send(laRheaCommands.querySelectionStatus());
+                command = data.substring(2, 3);
+                if (command.equalsIgnoreCase("0")){
+                    receiveText.append("Received Invalid Selection Command");
+                }
+                else {
+                    send(laRheaCommands.querySelectionStatus());
+                }
             }
             else if (command.equalsIgnoreCase("#S2")){
                 receiveText.append("Received Query Selection Status command");
@@ -397,13 +402,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
             else if (command.equalsIgnoreCase("#S4")){
                 receiveText.append("Send button press command receive");
+                handlePressingButton(command);
             }
             else if (command.equalsIgnoreCase("#S5")){
                 command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x00")){
                     receiveText.append("Unlock the machine command receive"+command);
                 }else {
-                    receiveText.append("lock the machine command receive"+command);
+                    receiveText.append("lock the machine command receive" + command);
                 }
             }
             else if (command.equalsIgnoreCase("#S6")){
@@ -424,6 +430,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
             else if (command.equalsIgnoreCase("#S8")){
                 receiveText.append("Received extended selection command"+command);
+                mIsCustomSelectionDone = true;
+                send(laRheaCommands.querySelectionStatus());
             }
             else if (command.equalsIgnoreCase("#C1")){
                 receiveText.append("Received CPU Screen Message Command"+command);
@@ -449,22 +457,56 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             else if (command.equalsIgnoreCase("#C9")){
                 receiveText.append("Received Get Machine Locking Status"+command);
             }
+            else if (command.equalsIgnoreCase("#PS")){
+                receiveText.append("Received Set Custom Selection Param"+command);
+            }
             else {
 //                LOGGER.warn("[{}] Received ?? Command: {}. Please check !!!", TAG, data);
             }
         }
     }
 
+    private void handlePressingButton(String command) {
+        String button = command.substring(2,3);
+
+        if (command.equalsIgnoreCase(String.valueOf(lockButtonStop))){
+            receiveText.append("Received lock button stop"+button);
+            send(laRheaCommands.querySelectionStatus());
+        }
+        else if(command.equalsIgnoreCase(String.valueOf(unlockButtonStop))){
+            receiveText.append("Received unlock button stop"+button);
+            send(laRheaCommands.querySelectionStatus());
+        }
+//        else if (!mIsTransactionProcessing && mIsDispensingComplete){
+//            send(laRheaCommands.querySelectionStatus());
+//        }
+    }
+
     private void handleSelectionStatus(String data) {
+
+        if (mIsTransactionProcessing && !mIsCustomSelectionDone) {
+            send(laRheaCommands.querySelectionStatus());
+            return;
+        } else if(mIsDispensingComplete && !mIsCustomSelectionDone){
+            send(laRheaCommands.querySelectionStatus());
+        }
+
         String command = data.substring(1,2);
+
         if (command.equalsIgnoreCase("0x01")){
             receiveText.append("Waiting for payment"+command);
-//            openPaymentOption(actualPrice);
+            if (mIsTransactionProcessing){
+//                            openPaymentOption(actualPrice);
+            }
+            else {
+
+            }
         }
         else if (command.equalsIgnoreCase("0x02")){
             Log.d(TAG, "Delivering in progress, send lock Stop button command");
-            send(laRheaCommands.lockCoffeeMachine());
             receiveText.append("delivering in progress, STOP button is not available"+command);
+
+            send(laRheaCommands.sendPressButton(lockButtonStop));
         }
         else if (command.equalsIgnoreCase("0x03")){
             receiveText.append("Finished KO"+command);
@@ -473,10 +515,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.append("Finished OK"+command);
         }
         else if (command.equalsIgnoreCase("0x05")){
-            send(laRheaCommands.unlockCoffeeMachine());
             Log.d(TAG, "Delivering in progress, send unlock Stop button command");
             receiveText.append("delivering in progress, STOP button is available"+command);
 
+            mIsDispensingComplete = true;
+            send(laRheaCommands.sendPressButton(unlockButtonStop));
         }
     }
 

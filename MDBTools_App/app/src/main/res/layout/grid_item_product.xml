@@ -36,14 +36,26 @@
 
         <!-- Product Price -->
         <TextView
-            android:id="@+id/productPrice"
+            android:id="@+id/currency"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/productName"
             android:layout_marginTop="8dp"
-            android:text="$9.99"
+            android:text="RM"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_alignParentStart="true" />
+
+        <TextView
+            android:id="@+id/productPrice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/productName"
+            android:layout_marginStart="3dp"
+            android:layout_marginTop="8dp"
+            android:layout_toEndOf="@+id/currency"
+            android:text="10.00"
+            android:textSize="16sp"
+            android:textStyle="bold" />
     </RelativeLayout>
 </androidx.cardview.widget.CardView>

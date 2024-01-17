@@ -39,10 +39,31 @@ final class TextUtil {
         return buf.toByteArray();
     }
 
-     static String convertToHex(int decimalValue) {
-        return String.format("0x%02X", decimalValue);
+    static String convertToHex(int decimalValue) {
+        return String.format("%02X", decimalValue);
+//        return String.format("0x%02X", decimalValue);
     }
 
+    static String convertToByteFormat(String message){
+        byte[] byteArray = new byte[message.length()];
+
+        // Convert each character to its ASCII value and store in the byte array
+        for (int i = 0; i < message.length(); i++) {
+            byteArray[i] = (byte) message.charAt(i);
+        }
+
+        // Store the result in a variable
+        StringBuilder resultBuilder = new StringBuilder("{'" + (char) byteArray[0] + "'");
+        for (int i = 1; i < byteArray.length; i++) {
+            resultBuilder.append(", '" + (char) byteArray[i] + "'");
+        }
+        resultBuilder.append("}");
+
+        // Assign the result to a variable
+        String result = resultBuilder.toString();
+
+        return result;
+    }
     static String getLSBMSB(int decimalValue) {
         byte LSB = getLSB(decimalValue);
         byte MSB = getMSB(decimalValue);
@@ -87,6 +108,32 @@ final class TextUtil {
             else        c += '0';
             sb.append((char)c);
         }
+    }
+
+    static String calculateCHK2(String message) {
+        String chk = "";
+
+        StringBuilder sb = new StringBuilder();
+        TextUtil.toHexString(sb, TextUtil.fromHexString(message));
+        String msg = sb.toString();
+
+        // Calculate CHK
+        String[] tempDataArray = msg.split(" ");
+        int sum = 0;
+        for (String tempData : tempDataArray) {
+            sum = sum + Integer.parseInt(tempData, 16);
+        }
+        // convert int to hex
+        String sumHex = Integer.toHexString(sum);
+        chk = sumHex;
+        if (chk.length() < 2) {
+            chk = "0" + chk;
+        } else if (chk.length() > 2) {
+            // get last 2
+            chk = chk.substring(chk.length() - 2);
+        }
+
+        return chk;
     }
 
     /**
