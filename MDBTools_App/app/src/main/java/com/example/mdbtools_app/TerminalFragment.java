@@ -77,8 +77,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean mIsTransactionProcessing = false;
     private boolean mIsDispensingComplete = false;
     private boolean mIsCustomSelectionDone = false;
-
-
+    private int sendByteCount = 0;
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -235,12 +234,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         } else if (id == R.id.sendBreak) {
             try {
-                usbSerialPort.setBreak(true);
-                Thread.sleep(100);
-                status("send BREAK");
-                usbSerialPort.setBreak(false);
+                send(laRheaCommands.getCpuScreenMessage());
             } catch (Exception e) {
-                status("send BREAK failed: " + e.getMessage());
+                status(e.getMessage());
             }
             return true;
         } else {
@@ -298,6 +294,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             usbSerialPort.open(usbConnection);
             try {
                 usbSerialPort.setParameters(baudRate, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+
             } catch (UnsupportedOperationException e) {
                 status("Setting serial parameters failed: " + e.getMessage());
             }
@@ -331,8 +328,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 //            byte [] data = {
 //                    23 ,41 ,1, 95
 //            };
-            receiveText.append(newline+message+"                    Length of bytes :"+message.length()+"\n\r");
+            receiveText.append(newline+"String of bytes :"+Arrays.toString(message.toCharArray()) +"\n\r"+"        Length of bytes :"+message.length()+"\n\r");
 //            receiveText.append(newline+Arrays.toString(message.toCharArray())+"\n\r");
+            Log.d(TAG,"SEND MESSAGES :    "+message.toString()+message.getBytes());
             service.write(message.getBytes());
         } catch (Exception e) {
             onSerialIoError(e);
@@ -362,6 +360,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         for (byte[] data : datas) {
             String msg = new String(data);
             handleReceivedMessage(msg);
+            Log.d(TAG,"RECEIVE MESSAGES : "+msg);
         }
     }
 
@@ -376,12 +375,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             if (command.equalsIgnoreCase("#C2")){
 
                 receiveText.append("Received get selection availability");
+                Log.d(TAG, "Received get selection availability");
             }
             else if (command.equalsIgnoreCase("#S1")){
                 receiveText.append("Received Start a selection command");
+                Log.d(TAG, "Received Start a selection command");
                 command = data.substring(2, 3);
                 if (command.equalsIgnoreCase("0")){
                     receiveText.append("Received Invalid Selection Command");
+                    Log.d(TAG, "Received Invalid Selection Command");
                 }
                 else {
                     send(laRheaCommands.querySelectionStatus());
@@ -389,76 +391,96 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
             else if (command.equalsIgnoreCase("#S2")){
                 receiveText.append("Received Query Selection Status command");
+                Log.d(TAG, "Received Query Selection Status command");
                 handleSelectionStatus(data);
             }
             else if (command.equalsIgnoreCase("#S3")){
                 command = data.substring(0,2);
                 if (command.equalsIgnoreCase(String.valueOf(itemSelection))) {
                     receiveText.append("Received Selection already paid command");
+                    Log.d(TAG, "Received Selection already paid command");
                 }
                 else if(itemSelection == 0) {
                     receiveText.append("Invalid selection item");
+                    Log.d(TAG, "Invalid selection item");
                 }
             }
             else if (command.equalsIgnoreCase("#S4")){
                 receiveText.append("Send button press command receive");
+                Log.d(TAG, "Send button press command receive");
                 handlePressingButton(command);
             }
             else if (command.equalsIgnoreCase("#S5")){
                 command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x00")){
                     receiveText.append("Unlock the machine command receive"+command);
+                    Log.d(TAG, "Unlock the machine command receive");
                 }else {
                     receiveText.append("lock the machine command receive" + command);
+                    Log.d(TAG, "lock the machine command receive");
                 }
             }
             else if (command.equalsIgnoreCase("#S6")){
                 command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x00")){
                 receiveText.append("Received display text on screen command"+command);
+                    Log.d(TAG, "Received display text on screen command");
                 }else {
                     receiveText.append("Error displaying text on screen"+command);
+                    Log.d(TAG, "Error displaying text on screen");
                 }
             }
             else if (command.equalsIgnoreCase("#S7")){
                 command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x01")){
                     receiveText.append("Received Enabled Selection"+command);
+                    Log.d(TAG, "Received Enabled Selection");
                 }else {
                     receiveText.append("Received Disabled Selection"+command);
+                    Log.d(TAG, "Received Disabled Selection");
                 }
             }
             else if (command.equalsIgnoreCase("#S8")){
                 receiveText.append("Received extended selection command"+command);
+                Log.d(TAG, "Received extended selection command");
                 mIsCustomSelectionDone = true;
                 send(laRheaCommands.querySelectionStatus());
             }
             else if (command.equalsIgnoreCase("#C1")){
                 receiveText.append("Received CPU Screen Message Command"+command);
+                Log.d(TAG, "Received CPU Screen Message Command");
             }
             else if (command.equalsIgnoreCase("#C3")){
                 receiveText.append("Received Get Selection Price"+command);
+                Log.d(TAG, "Received Get Selection Price");
             }
             else if (command.equalsIgnoreCase("#C4")){
                 receiveText.append("Received Get 12 BTN-LED Status"+command);
+                Log.d(TAG, "Received Get 12 BTN-LED Status");
             }
             else if (command.equalsIgnoreCase("#C5")){
                 receiveText.append("Received Get Selection Name"+command);
+                Log.d(TAG, "Received Get Selection Name");
             }
             else if (command.equalsIgnoreCase("#C6")){
                 receiveText.append("Received Get Cup Sensor Status"+command);
+                Log.d(TAG, "Received Get Cup Sensor Status");
             }
             else if (command.equalsIgnoreCase("#C7")){
                 receiveText.append("Received Get Cpu Status"+command);
+                Log.d(TAG, "Received Get Cpu Status");
             }
             else if (command.equalsIgnoreCase("#C8")){
                 receiveText.append("Received Get Daily Sales Data"+command);
+                Log.d(TAG, "Received Get Daily Sales Data");
             }
             else if (command.equalsIgnoreCase("#C9")){
                 receiveText.append("Received Get Machine Locking Status"+command);
+                Log.d(TAG, "Received Get Machine Locking Status");
             }
             else if (command.equalsIgnoreCase("#PS")){
                 receiveText.append("Received Set Custom Selection Param"+command);
+                Log.d(TAG, "Received Set Custom Selection Param");
             }
             else {
 //                LOGGER.warn("[{}] Received ?? Command: {}. Please check !!!", TAG, data);
@@ -471,10 +493,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         if (command.equalsIgnoreCase(String.valueOf(lockButtonStop))){
             receiveText.append("Received lock button stop"+button);
+            Log.d(TAG, "Received lock button stop");
             send(laRheaCommands.querySelectionStatus());
         }
         else if(command.equalsIgnoreCase(String.valueOf(unlockButtonStop))){
             receiveText.append("Received unlock button stop"+button);
+            Log.d(TAG, "Received unlock button stop");
             send(laRheaCommands.querySelectionStatus());
         }
 //        else if (!mIsTransactionProcessing && mIsDispensingComplete){
@@ -495,6 +519,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         if (command.equalsIgnoreCase("0x01")){
             receiveText.append("Waiting for payment"+command);
+            Log.d(TAG, "Waiting for payment");
             if (mIsTransactionProcessing){
 //                            openPaymentOption(actualPrice);
             }
@@ -504,14 +529,16 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
         else if (command.equalsIgnoreCase("0x02")){
             Log.d(TAG, "Delivering in progress, send lock Stop button command");
-            receiveText.append("delivering in progress, STOP button is not available"+command);
+            receiveText.append("delivering in progress, send lock Stop button command"+command);
 
             send(laRheaCommands.sendPressButton(lockButtonStop));
         }
         else if (command.equalsIgnoreCase("0x03")){
+            Log.d(TAG, "Finished KO Status");
             receiveText.append("Finished KO"+command);
         }
         else if (command.equalsIgnoreCase("0x04")){
+            Log.d(TAG, "Finished OK Status");
             receiveText.append("Finished OK"+command);
         }
         else if (command.equalsIgnoreCase("0x05")){
@@ -520,6 +547,106 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             mIsDispensingComplete = true;
             send(laRheaCommands.sendPressButton(unlockButtonStop));
+        }
+    }
+
+    private void handleVendFailure(String errorMsg){
+        String errorCde = errorMsg.substring(3,4);
+        if (!mIsTransactionProcessing){
+//            sendPaymentVoid();
+        }else {
+            if (errorMsg.equalsIgnoreCase("OFF3")) {
+                Log.d(TAG, "The sensor monitoring the liquid level of the drip tray has triggered");
+            } else if (errorMsg.equalsIgnoreCase("OFF5")) {
+                Log.d(TAG, "Systems integrated into the CPU circuit do not function properly");
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF6")) {
+
+                if (errorCde.equalsIgnoreCase("C")){
+                    Log.d(TAG, "Excessive air breaker filling time; there may be no hydraulic power, the pressure may be \n" +
+                            "insufficient, or some obstruction may slow the proper flow of water (filter screen, narrowed \n" +
+                            "or clogged drain pipes)");
+                } else if (errorCde.equalsIgnoreCase("D")) {
+                    Log.d(TAG, "water entered the hydraulic circuit without dispensing drinks; there may be a leak in \n" +
+                            "the power circuit");
+                } else if (errorCde.equalsIgnoreCase("G")) {
+                    Log.d(TAG, "During the first installation, there was an error in filling water into the device");
+                }
+
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF7")) {
+                if (errorCde.equalsIgnoreCase("A")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("C")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                } else if (errorCde.equalsIgnoreCase("D")) {
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                } else if (errorCde.equalsIgnoreCase("R")) {
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF8")) {
+                if (errorCde.equalsIgnoreCase("A")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                } else if (errorCde.equalsIgnoreCase("B")) {
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF9")) {
+
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF10")) {
+
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF14")) {
+                errorCde.substring(4,5);
+                if (errorCde.equalsIgnoreCase("V")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF17")) {
+                errorCde.substring(4,5);
+                if (errorCde.equalsIgnoreCase("A")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF24")) {
+                errorCde.substring(4,5);
+                if (errorCde.equalsIgnoreCase("A")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("V")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorMsg.equalsIgnoreCase("OFF31")) {
+                errorCde.substring(4,5);
+                if (errorCde.equalsIgnoreCase("A")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("B")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("C")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("D")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+                else if (errorCde.equalsIgnoreCase("H")){
+                    Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+                }
+            }
+            else if (errorCde.equalsIgnoreCase("42")){
+                Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+            }
+            else if (errorCde.equalsIgnoreCase("43")){
+                Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+            }
+            else if (errorCde.equalsIgnoreCase("77")){
+                Log.d(TAG, "Delivering in progress, send unlock Stop button command");
+            }
         }
     }
 

@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b816fcc5-74ee-4ca9-baef-8caab85d7813" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MDBTools_App/app/src/main/java/com/example/mdbtools_app/TerminalFragment.java" beforeDir="false" afterPath="$PROJECT_DIR$/MDBTools_App/app/src/main/java/com/example/mdbtools_app/TerminalFragment.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MDBTools_App/app/src/main/java/com/example/mdbtools_app/laRheaCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/MDBTools_App/app/src/main/java/com/example/mdbtools_app/laRheaCommands.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

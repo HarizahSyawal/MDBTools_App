@@ -188,7 +188,7 @@ final class laRheaCommands {
         chk = TextUtil.calculateCHK(command);
         finalMsg = command+TextUtil.convertToHex(chk).trim();
 
-        // # C 6 [ck]  {# , C, 8}
+        // # C 6 [ck]  {# , C, 6}
         return finalMsg;
     }
 
@@ -205,9 +205,10 @@ final class laRheaCommands {
         command = Constants.GET_CPU_SCREEN_MESSAGE;
         chk = TextUtil.calculateCHK(command);
         finalMsg = command+TextUtil.convertToHex(chk).trim();
+        command = Constants.GET_CPU_SCREEN_MESSAGE;
 
         // # C 1 [ck]
-        return finalMsg;
+        return command;
     }
 
 }
