@@ -78,6 +78,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean mIsDispensingComplete = false;
     private boolean mIsCustomSelectionDone = false;
     private int sendByteCount = 0;
+    private byte[] writeBuffer = new byte[8192];
+    private byte[] outputBuffer = new byte[8192];
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -230,11 +232,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.setText("");
             return true;
         } else if (id == R.id.paymentButton) {
-            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
+            send(laRheaCommands.requestAPIVersion());
+//            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
             return true;
         } else if (id == R.id.sendBreak) {
             try {
-                send(laRheaCommands.getCpuScreenMessage());
+//                send(laRheaCommands.getCpuScreenMessage());
             } catch (Exception e) {
                 status(e.getMessage());
             }
@@ -321,17 +324,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
 
         try {
-//            byte[] byteArray = new byte[message.length()];
-//            for (int i = 0; i < message.length(); i++) {
-//                byteArray[i] = (byte) message.charAt(i);
-//            }
-//            byte [] data = {
-//                    23 ,41 ,1, 95
-//            };
-            receiveText.append(newline+"String of bytes :"+Arrays.toString(message.toCharArray()) +"\n\r"+"        Length of bytes :"+message.length()+"\n\r");
-//            receiveText.append(newline+Arrays.toString(message.toCharArray())+"\n\r");
-            Log.d(TAG,"SEND MESSAGES :    "+message.toString()+message.getBytes());
-            service.write(message.getBytes());
+            String commandMsg = message.replace(" ", "");
+            String finalCommand = TextUtil.hexToAscii(commandMsg.substring(0,6));
+            byte [] data = TextUtil.convertToByteArray(message);
+
+            receiveText.append(newline+"SEND :"+ "["+finalCommand+"]" + "\r" +   message   +"  Len:"+data.length+"\n");
+            Log.d(TAG,"SEND MESSAGES :    "+ "["+finalCommand+"]" + "\r" +   message   +" Len:"+data.length+"\n");
+            service.write(data);
         } catch (Exception e) {
             onSerialIoError(e);
         }
@@ -357,10 +356,16 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private void receive(ArrayDeque<byte[]> datas) {
 
+//        for (byte[] data : datas) {
+//            String msg = new String(data);
+//            handleReceivedMessage(msg);
+//            Log.d(TAG,"RECEIVE MESSAGES : "+msg);
+//        }
+
         for (byte[] data : datas) {
-            String msg = new String(data);
-            handleReceivedMessage(msg);
-            Log.d(TAG,"RECEIVE MESSAGES : "+msg);
+            String msg = TextUtil.bytesToHex(data);
+            handleReceivedMessage(TextUtil.hexToAscii(msg));
+            Log.d(TAG, "RECEIVE MESSAGES : " + TextUtil.hexToAscii(msg));
         }
     }
 
@@ -678,6 +683,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         ArrayDeque<byte[]> datas = new ArrayDeque<>();
         datas.add(data);
         receive(datas);
+        Log.d(TAG, "RECEIVING A MESSAGES : "+ TextUtil.bytesToHex(data));
     }
 
     public void onSerialRead(ArrayDeque<byte[]> datas) {

@@ -6,6 +6,7 @@ import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
+import android.util.Log;
 import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
@@ -44,26 +45,34 @@ final class TextUtil {
 //        return String.format("0x%02X", decimalValue);
     }
 
-    static String convertToByteFormat(String message){
-        byte[] byteArray = new byte[message.length()];
+//    static byte[] convertToByteArray(String input) {
+//        String[] parts = input.split("\\s+");
+//        byte[] byteArray = new byte[parts.length];
+//
+//        for (int i = 0; i < parts.length; i++) {
+//            byteArray[i] = Byte.parseByte(parts[i]);
+//        }
+//
+//        return byteArray;
+//    }
 
-        // Convert each character to its ASCII value and store in the byte array
-        for (int i = 0; i < message.length(); i++) {
-            byteArray[i] = (byte) message.charAt(i);
+    static byte[] convertToByteArray(String input) {
+        String[] parts = input.split("\\s+");
+        byte[] byteArray = new byte[parts.length];
+
+        for (int i = 0; i < parts.length; i++) {
+            if (i == parts.length - 1) {
+                // Convert the last part to a hexadecimal byte
+                byteArray[i] = (byte) Integer.parseInt(parts[i], 16);
+            } else {
+                // Convert other parts to decimal bytes
+                byteArray[i] = Byte.parseByte(parts[i]);
+            }
         }
 
-        // Store the result in a variable
-        StringBuilder resultBuilder = new StringBuilder("{'" + (char) byteArray[0] + "'");
-        for (int i = 1; i < byteArray.length; i++) {
-            resultBuilder.append(", '" + (char) byteArray[i] + "'");
-        }
-        resultBuilder.append("}");
-
-        // Assign the result to a variable
-        String result = resultBuilder.toString();
-
-        return result;
+        return byteArray;
     }
+
     static String getLSBMSB(int decimalValue) {
         byte LSB = getLSB(decimalValue);
         byte MSB = getMSB(decimalValue);
@@ -110,32 +119,6 @@ final class TextUtil {
         }
     }
 
-    static String calculateCHK2(String message) {
-        String chk = "";
-
-        StringBuilder sb = new StringBuilder();
-        TextUtil.toHexString(sb, TextUtil.fromHexString(message));
-        String msg = sb.toString();
-
-        // Calculate CHK
-        String[] tempDataArray = msg.split(" ");
-        int sum = 0;
-        for (String tempData : tempDataArray) {
-            sum = sum + Integer.parseInt(tempData, 16);
-        }
-        // convert int to hex
-        String sumHex = Integer.toHexString(sum);
-        chk = sumHex;
-        if (chk.length() < 2) {
-            chk = "0" + chk;
-        } else if (chk.length() > 2) {
-            // get last 2
-            chk = chk.substring(chk.length() - 2);
-        }
-
-        return chk;
-    }
-
     /**
      * use https://en.wikipedia.org/wiki/Caret_notation to avoid invisible control characters
      */
@@ -165,6 +148,23 @@ final class TextUtil {
         return sb;
     }
 
+    static String bytesToHex(byte[] bytes) {
+        StringBuilder hexStringBuilder = new StringBuilder();
+        for (byte b : bytes) {
+            hexStringBuilder.append(String.format("%02X", b));
+        }
+        return hexStringBuilder.toString();
+    }
+
+    static String hexToAscii(String hexString) {
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < hexString.length(); i += 2) {
+            String hex = hexString.substring(i, i + 2);
+            int decimal = Integer.parseInt(hex, 16);
+            output.append((char) decimal);
+        }
+        return output.toString();
+    }
 
     static class HexWatcher implements TextWatcher {
 
@@ -219,13 +219,22 @@ final class TextUtil {
         }
     }
 
-    static int calculateCHK(String message) {
-        int sum = 0;
-        for (int i = 0; i < message.length(); i++) {
-            char c = message.charAt(i);
-            int asciiValue = (int) c;
-            sum += asciiValue;
-        }
-        return sum;
+//    static int calculateCHK(String message) {
+//        int sum = 0;
+//        for (int i = 0; i < message.length(); i++) {
+//            char c = message.charAt(i);
+//            int asciiValue = (int) c;
+//            sum += asciiValue;
+//        }
+//        return sum;
+//    }
+static int calculateCHK(String message) {
+    int chk = 0;
+    for (int i = 0; i < message.length(); i++) {
+        char c = message.charAt(i);
+        int asciiValue = (int) c;
+        chk += asciiValue;
     }
+    return chk;
+}
 }

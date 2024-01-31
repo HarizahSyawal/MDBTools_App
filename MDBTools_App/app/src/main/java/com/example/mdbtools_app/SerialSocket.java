@@ -99,6 +99,7 @@ public class SerialSocket implements SerialInputOutputManager.Listener {
     public void onNewData(byte[] data) {
         if(listener != null)
             listener.onSerialRead(data);
+        Log.d(TAG, "RECEIVING A MESSAGES : "+ TextUtil.bytesToHex(data));
     }
 
     @Override
