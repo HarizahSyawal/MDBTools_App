@@ -35,10 +35,10 @@ final class laRheaCommands {
         return finalMsg;
     }
 
-    static String querySelectionStatus(int itemSelection){
+    static String querySelectionStatus(){
         command = Constants.QUERY_SELECTION_STATUS;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(itemSelection) + Integer.toHexString(chk);
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(chk);
 
         // '#' 'S' '2' 0x05{item selection} , 0xAC{total checksum in hex}
         return finalMsg;
@@ -47,9 +47,9 @@ final class laRheaCommands {
     static String alreadyPaidSelection(int itemSelection, int itemPrice){
         String finalItemPrice = TextUtil.convertToHex(itemPrice);
         lsbMsb = Integer.parseInt(TextUtil.getLSBMSB(Integer.parseInt(finalItemPrice)));
-        command = Constants.SELECTION_ALREADY_PAID+itemSelection+finalItemPrice+lsbMsb;
-        chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + itemSelection + " " + Integer.toHexString(chk);
+        command = Constants.SELECTION_ALREADY_PAID;
+        chk = TextUtil.calculateCHK(command)+itemSelection;
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(itemSelection) + " " + finalItemPrice + " " + TextUtil.convertToHex(lsbMsb) + " " + TextUtil.convertToHex(chk);
 
         // # S 3 [sel_num] [price16 LSB-MSB] [ck]
         return finalMsg;

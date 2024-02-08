@@ -7,11 +7,19 @@
         android:title="Clear"
         app:showAsAction="always" />
     <item
-        android:id="@+id/paymentButton"
-        android:title="Payment"
+        android:id="@+id/checkAPIVer"
+        android:title="Check API Version"
         app:showAsAction="never"/>
     <item
-        android:id="@+id/sendBreak"
+        android:id="@+id/getSelectionAvail"
+        android:title="Get Selection Availability"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/sendRestart"
         android:title="Restart Coffee Machine"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sendStatusChecking"
+        android:title="Get Selection Status"
         app:showAsAction="never" />
 </menu>
