@@ -12,6 +12,6 @@
         app:showAsAction="never"/>
     <item
         android:id="@+id/sendBreak"
-        android:title="Send BREAK"
+        android:title="Restart Coffee Machine"
         app:showAsAction="never" />
 </menu>

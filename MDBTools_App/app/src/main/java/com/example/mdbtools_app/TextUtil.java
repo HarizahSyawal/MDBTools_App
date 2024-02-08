@@ -45,33 +45,33 @@ final class TextUtil {
 //        return String.format("0x%02X", decimalValue);
     }
 
-//    static byte[] convertToByteArray(String input) {
-//        String[] parts = input.split("\\s+");
-//        byte[] byteArray = new byte[parts.length];
-//
-//        for (int i = 0; i < parts.length; i++) {
-//            byteArray[i] = Byte.parseByte(parts[i]);
-//        }
-//
-//        return byteArray;
-//    }
-
     static byte[] convertToByteArray(String input) {
         String[] parts = input.split("\\s+");
         byte[] byteArray = new byte[parts.length];
 
         for (int i = 0; i < parts.length; i++) {
-            if (i == parts.length - 1) {
-                // Convert the last part to a hexadecimal byte
-                byteArray[i] = (byte) Integer.parseInt(parts[i], 16);
-            } else {
-                // Convert other parts to decimal bytes
-                byteArray[i] = Byte.parseByte(parts[i]);
-            }
+            byteArray[i] = Byte.parseByte(parts[i]);
         }
 
         return byteArray;
     }
+
+//    static byte[] convertToByteArray(String input) {
+//        String[] parts = input.split("\\s+");
+//        byte[] byteArray = new byte[parts.length];
+//
+//        for (int i = 0; i < parts.length; i++) {
+//            if (i == parts.length - 1) {
+//                // Convert the last part to a hexadecimal byte
+//                byteArray[i] = (byte) Integer.parseInt(parts[i], 16);
+//            } else {
+//                // Convert other parts to decimal bytes
+//                byteArray[i] = Byte.parseByte(parts[i]);
+//            }
+//        }
+//
+//        return byteArray;
+//    }
 
     static String getLSBMSB(int decimalValue) {
         byte LSB = getLSB(decimalValue);

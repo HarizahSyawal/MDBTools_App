@@ -203,7 +203,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private List<Product> generateSampleProductList() {
         List<Product> products = new ArrayList<>();
-        products.add(new Product(1, "Coffee Latte", "7", R.drawable.product1));
+        products.add(new Product(11, "Testing", "0", R.drawable.product1));
         products.add(new Product(2, "Cappucino", "7", R.drawable.product1));
         products.add(new Product(3, "Americano", "3", R.drawable.product2));
         products.add(new Product(4, "White Coffee", "6", R.drawable.product1));
@@ -232,12 +232,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.setText("");
             return true;
         } else if (id == R.id.paymentButton) {
-            send(laRheaCommands.requestAPIVersion());
-//            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
+            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
             return true;
         } else if (id == R.id.sendBreak) {
             try {
-//                send(laRheaCommands.getCpuScreenMessage());
+                send(laRheaCommands.restartCoffeeMachine());
             } catch (Exception e) {
                 status(e.getMessage());
             }
@@ -326,7 +325,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         try {
             String commandMsg = message.replace(" ", "");
             String finalCommand = TextUtil.hexToAscii(commandMsg.substring(0,6));
-            byte [] data = TextUtil.convertToByteArray(message);
+            byte [] data = TextUtil.fromHexString(message);
 
             receiveText.append(newline+"SEND :"+ "["+finalCommand+"]" + "\r" +   message   +"  Len:"+data.length+"\n");
             Log.d(TAG,"SEND MESSAGES :    "+ "["+finalCommand+"]" + "\r" +   message   +" Len:"+data.length+"\n");
@@ -336,36 +335,18 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
-//    private void receive(ArrayDeque<byte[]> datas) {
-//
-//        char STX = '\u0002'; // Start of Text
-//        char ETX = '\u0003'; // End of Text
-//
-//        for (byte[] data : datas) {
-//            String msg = new String(data);
-//            String messageWithoutSTXETX = msg.replace(STX, ' ').replace(ETX, ' ').trim();
-//            mVMMessageSB.append(messageWithoutSTXETX);
-//
-//            char lastChar = msg.charAt(msg.length() - 1);
-//            if (lastChar == ETX) {
-//                handleReceivedMessage(mVMMessageSB.toString());
-//                mVMMessageSB = new StringBuilder();
-//            }
-//        }
-//    }
-
     private void receive(ArrayDeque<byte[]> datas) {
-
-//        for (byte[] data : datas) {
-//            String msg = new String(data);
-//            handleReceivedMessage(msg);
-//            Log.d(TAG,"RECEIVE MESSAGES : "+msg);
-//        }
 
         for (byte[] data : datas) {
             String msg = TextUtil.bytesToHex(data);
-            handleReceivedMessage(TextUtil.hexToAscii(msg));
-            Log.d(TAG, "RECEIVE MESSAGES : " + TextUtil.hexToAscii(msg));
+
+            if (msg.length() >= 6) {
+                String finalCommand = TextUtil.hexToAscii(msg.substring(0, 6));
+                receiveText.append("Receive : " + "[" + finalCommand + "]" + "\r" + " Len:" + data.length + "\n");
+                handleReceivedMessage(msg);
+            }
+            else
+            Log.d(TAG, "RECEIVE MESSAGES : " );
         }
     }
 
@@ -376,8 +357,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             receiveText.append("command is null");
             Log.d(TAG, "laRhea Command is null !!!");
         } else {
-            String command = data;
-            if (command.equalsIgnoreCase("#C2")){
+            String command = TextUtil.hexToAscii(data.substring(0,6));
+            String extractedMsg = data;
+            if(command.equalsIgnoreCase("#A1")){
+                receiveText.append("Receiced API VERSION" + "["+extractedMsg.substring(6, 10)+"]");
+                Log.d(TAG, "Receiced API VERSION" + "["+extractedMsg.substring(6, 10)+"]");
+            }
+            else if (command.equalsIgnoreCase("#C2")){
 
                 receiveText.append("Received get selection availability");
                 Log.d(TAG, "Received get selection availability");
@@ -385,13 +371,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             else if (command.equalsIgnoreCase("#S1")){
                 receiveText.append("Received Start a selection command");
                 Log.d(TAG, "Received Start a selection command");
-                command = data.substring(2, 3);
                 if (command.equalsIgnoreCase("0")){
                     receiveText.append("Received Invalid Selection Command");
                     Log.d(TAG, "Received Invalid Selection Command");
                 }
                 else {
-                    send(laRheaCommands.querySelectionStatus());
+                    send(laRheaCommands.querySelectionStatus(itemSelection));
                 }
             }
             else if (command.equalsIgnoreCase("#S2")){
@@ -400,7 +385,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 handleSelectionStatus(data);
             }
             else if (command.equalsIgnoreCase("#S3")){
-                command = data.substring(0,2);
                 if (command.equalsIgnoreCase(String.valueOf(itemSelection))) {
                     receiveText.append("Received Selection already paid command");
                     Log.d(TAG, "Received Selection already paid command");
@@ -416,7 +400,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 handlePressingButton(command);
             }
             else if (command.equalsIgnoreCase("#S5")){
-                command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x00")){
                     receiveText.append("Unlock the machine command receive"+command);
                     Log.d(TAG, "Unlock the machine command receive");
@@ -426,7 +409,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 }
             }
             else if (command.equalsIgnoreCase("#S6")){
-                command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x00")){
                 receiveText.append("Received display text on screen command"+command);
                     Log.d(TAG, "Received display text on screen command");
@@ -436,7 +418,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 }
             }
             else if (command.equalsIgnoreCase("#S7")){
-                command = data.substring(1,2);
                 if (command.equalsIgnoreCase("0x01")){
                     receiveText.append("Received Enabled Selection"+command);
                     Log.d(TAG, "Received Enabled Selection");
@@ -449,7 +430,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 receiveText.append("Received extended selection command"+command);
                 Log.d(TAG, "Received extended selection command");
                 mIsCustomSelectionDone = true;
-                send(laRheaCommands.querySelectionStatus());
+                send(laRheaCommands.querySelectionStatus(itemSelection));
             }
             else if (command.equalsIgnoreCase("#C1")){
                 receiveText.append("Received CPU Screen Message Command"+command);
@@ -494,17 +475,17 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     private void handlePressingButton(String command) {
-        String button = command.substring(2,3);
+        String button = command.substring(0,6);
 
         if (command.equalsIgnoreCase(String.valueOf(lockButtonStop))){
             receiveText.append("Received lock button stop"+button);
             Log.d(TAG, "Received lock button stop");
-            send(laRheaCommands.querySelectionStatus());
+            send(laRheaCommands.querySelectionStatus(itemSelection));
         }
         else if(command.equalsIgnoreCase(String.valueOf(unlockButtonStop))){
             receiveText.append("Received unlock button stop"+button);
             Log.d(TAG, "Received unlock button stop");
-            send(laRheaCommands.querySelectionStatus());
+            send(laRheaCommands.querySelectionStatus(itemSelection));
         }
 //        else if (!mIsTransactionProcessing && mIsDispensingComplete){
 //            send(laRheaCommands.querySelectionStatus());
@@ -514,22 +495,22 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private void handleSelectionStatus(String data) {
 
         if (mIsTransactionProcessing && !mIsCustomSelectionDone) {
-            send(laRheaCommands.querySelectionStatus());
+            send(laRheaCommands.querySelectionStatus(itemSelection));
             return;
-        } else if(mIsDispensingComplete && !mIsCustomSelectionDone){
-            send(laRheaCommands.querySelectionStatus());
+        } else if(!mIsDispensingComplete && !mIsCustomSelectionDone){
+            send(laRheaCommands.querySelectionStatus(itemSelection));
         }
 
-        String command = data.substring(1,2);
+        String command = data.substring(0,6);
 
         if (command.equalsIgnoreCase("0x01")){
             receiveText.append("Waiting for payment"+command);
-            Log.d(TAG, "Waiting for payment");
+            Log.d(TAG, "Waiting for payment" + "Status :"+ command);
             if (mIsTransactionProcessing){
 //                            openPaymentOption(actualPrice);
             }
             else {
-
+                Log.d(TAG, "Payment Cancelled" + "Status :"+ command);
             }
         }
         else if (command.equalsIgnoreCase("0x02")){
