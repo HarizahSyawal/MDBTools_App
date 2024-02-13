@@ -19,6 +19,18 @@
         android:title="Restart Coffee Machine"
         app:showAsAction="never" />
     <item
+        android:id="@+id/sendExtSelection"
+        android:title="Custom Sugar Selection"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/getCpuScreenMessages"
+        android:title="Get CPU Screen Messages"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sendPayment"
+        android:title="Make a Payment"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/sendStatusChecking"
         android:title="Get Selection Status"
         app:showAsAction="never" />

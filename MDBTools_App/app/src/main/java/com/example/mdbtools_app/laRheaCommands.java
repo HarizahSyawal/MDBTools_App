@@ -48,7 +48,7 @@ final class laRheaCommands {
         String finalItemPrice = TextUtil.convertToHex(itemPrice);
         lsbMsb = Integer.parseInt(TextUtil.getLSBMSB(Integer.parseInt(finalItemPrice)));
         command = Constants.SELECTION_ALREADY_PAID;
-        chk = TextUtil.calculateCHK(command)+itemSelection;
+        chk = TextUtil.calculateCHK(command)+itemSelection+itemPrice+lsbMsb;
         finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(itemSelection) + " " + finalItemPrice + " " + TextUtil.convertToHex(lsbMsb) + " " + TextUtil.convertToHex(chk);
 
         // # S 3 [sel_num] [price16 LSB-MSB] [ck]
@@ -65,10 +65,10 @@ final class laRheaCommands {
     }
 
     static String startSelectionExtended(int itemSelection, int sugarLevel, int toppingIndex){
-        String version = "0x01";
-        command = Constants.START_SELECTION_EXTENDED+version+itemSelection+sugarLevel+toppingIndex;
-        chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(chk);
+        int version = 1;
+        command = Constants.START_SELECTION_EXTENDED;
+        chk = TextUtil.calculateCHK(command)+version+itemSelection+sugarLevel+toppingIndex;
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(version) + " " + TextUtil.convertToHex(itemSelection) + " " + TextUtil.convertToHex(sugarLevel) + " " + TextUtil.convertToHex(toppingIndex) + " " + TextUtil.convertToHex(chk);
 
         // # S 8 [version] [sel_num] [sugar_level] [topping_index] [ck]
         return finalMsg;
@@ -140,10 +140,10 @@ final class laRheaCommands {
     }
 
     static String enableSelection(int itemSelection){
-        String enableSelection = "0x01";
+        String enableSelection = "01";
         command = Constants.ENABLE_SELECTION+itemSelection+enableSelection;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(chk);
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(chk);
 
         // # S 7 [selNum] [enabled] [ck]
         return finalMsg;
@@ -159,10 +159,10 @@ final class laRheaCommands {
         return finalMsg;
     }
 
-    static String sendPressButton(int button){
-        command = Constants.SEND_BUTTON_PRESS+button;
+    static String sendPressButton(){
+        command = Constants.SEND_BUTTON_PRESS+Constants.STOP_BUTTON;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(chk);
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(chk);
 
         // # S 4 [btn] [ck]
         return finalMsg;
@@ -209,7 +209,7 @@ final class laRheaCommands {
     static String getCpuStatus(){
         command = Constants.GET_CPU_STATUS;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(chk);
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(chk);
 
         // # C 7 [ck]  {# , C, 7}
         return finalMsg;
@@ -218,10 +218,10 @@ final class laRheaCommands {
     static String getCpuScreenMessage(){
         command = Constants.GET_CPU_SCREEN_MESSAGE;
         chk = TextUtil.calculateCHK(command);
-        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + Integer.toHexString(chk);
+        finalMsg = TextUtil.toHexString(command.getBytes()) + " " + TextUtil.convertToHex(chk);
 
-        // # C 1 [ck]
-        return command;
+        // # C 8 [ck]
+        return finalMsg;
     }
 
 }

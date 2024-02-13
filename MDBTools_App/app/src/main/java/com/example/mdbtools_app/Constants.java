@@ -52,6 +52,7 @@ class Constants {
     static final String COFFEE_GROUND_QTY = "0x05";
     static final String COFFEE_WATER_QTY = "0x06";
     static final String FOAM_TYPE = "0x07"; //(value:0 = hot, no foam, 1=hot foam 1... 7=cold foam 3 )
+    static final String STOP_BUTTON = "STOP";
 
 
     private Constants() {}
