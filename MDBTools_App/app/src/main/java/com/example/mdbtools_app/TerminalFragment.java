@@ -52,7 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener, SwipeRefreshLayout.OnRefreshListener {
+public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener,ProductAdapter.OnItemClickListener {
 
     enum Connected {False, Pending, True}
 
@@ -74,13 +74,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private int itemSelection;
     private String itemPrice;
     private String itemNum;
-    private int lockButtonStop = 1;
-    private int unlockButtonStop = 2;
-    private StringBuilder mVMMessageSB = new StringBuilder();
     private boolean mIsTransactionProcessing = false;
     private boolean mIsDispensingComplete = false;
     private boolean mIsSelectionDone = false;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private boolean hideItemSelection = false;
+    private String extractCde;
 
     public TerminalFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -93,15 +91,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
         };
     }
-
-    @Override
-    public void onRefresh() {
-        // Your refresh logic goes here
-
-        // When the refreshing is complete, call setRefreshing(false)
-        swipeRefreshLayout.setRefreshing(false);
-    }
-
     /*
      * Lifecycle
      */
@@ -197,22 +186,44 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         receiveText.setTextColor(getResources().getColor(R.color.colorRecieveText)); // set as default color to reduce number of spans
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
 
-        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
-        swipeRefreshLayout.setOnRefreshListener(this::onRefresh);
         recyclerView = view.findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
         productAdapter = new ProductAdapter(getContext(), generateSampleProductList(), this);
         recyclerView.setAdapter(productAdapter);
+        updateProductListVisibility(hideItemSelection);
 
         return view;
     }
 
+    private void updateProductListVisibility(boolean hideItemSelection) {
+        List<Product> productList = generateSampleProductList();
+
+        // Apply the condition to hide items
+        for (Product product : productList) {
+            if (hideItemSelection && "Coffee".equals(product.getCategory())) {
+                product.setVisible(false);
+            }
+        }
+
+        productAdapter.setProducts(productList);
+        productAdapter.notifyDataSetChanged();
+    }
+
     private List<Product> generateSampleProductList() {
         List<Product> products = new ArrayList<>();
-        products.add(new Product(4, "Espresso", "5", R.drawable.product1));
-        products.add(new Product(7, "Cappucino", "6", R.drawable.product1));
-        products.add(new Product(11, "Americano", "5", R.drawable.product2));
-        products.add(new Product(12, "Hot Water", "0", R.drawable.product1));
+        products.add(new Product(1, "Espresso", "4", R.drawable.mocha, true, "Coffee"));
+        products.add(new Product(2, "Lungo", "5", R.drawable.product1,true, "Coffee"));
+        products.add(new Product(3, "Short White Coffee", "8", R.drawable.product2,true, "Coffee"));
+        products.add(new Product(4, "Cappucino", "5", R.drawable.product1,true, "Coffee"));
+        products.add(new Product(5, "Milk", "5", R.drawable.hotwater,true, "NonCoffee"));
+        products.add(new Product(6, "Latte", "5", R.drawable.product1,true, "NonCoffee"));
+        products.add(new Product(7, "Mocha", "6", R.drawable.product2,true, "NonCoffee"));
+        products.add(new Product(8, "Chocolate", "6", R.drawable.product1,true, "Coffee"));
+        products.add(new Product(9, "ChocoMilk", "4.5", R.drawable.product2,true, "Coffee"));
+        products.add(new Product(10, "Coffee", "4", R.drawable.product1,true, "Coffee"));
+        products.add(new Product(11, "Americano", "5", R.drawable.product2,true, "Coffee"));
+        products.add(new Product(12, "Hot Water", "1", R.drawable.hotwater,true, "NonCoffee"));
+
         // Add more products as needed
         return products;
     }
@@ -222,7 +233,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         itemSelection = product.getId();
         itemPrice = product.getPrice();
 
-//        send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
         send(laRheaCommands.startSelection(itemSelection));
 //        send(laRheaCommands.startSelectionExtended(itemSelection, 3, 1));
     }
@@ -239,8 +249,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (id == R.id.clear) {
             receiveText.setText("");
             return true;
-        } else if (id == R.id.checkAPIVer) {
-            send(laRheaCommands.requestAPIVersion());
+        } else if (id == R.id.showCoffeeSelection) {
+            updateProductListVisibility(false);
             return true;
         }
         else if (id == R.id.getSelectionAvail) {
@@ -255,11 +265,20 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         }
         else if (id == R.id.getCpuScreenMessages) {
+//            try {
+//                Thread.sleep(5000); // Sleep for 5 second
+//                send(laRheaCommands.getCpuScreenMessage());
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             send(laRheaCommands.getCpuScreenMessage());
             return true;
         } else if (id == R.id.sendPayment) {
             send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
-//            send(laRheaCommands.startSelectionExtended(itemSelection, 3, 0));
+            return true;
+        }
+        else if (id == R.id.getCpuStatus) {
+            send(laRheaCommands.getCpuStatus());
             return true;
         }
         else if (id == R.id.sendStatusChecking) {
@@ -398,27 +417,41 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                     send(laRheaCommands.getCpuScreenMessage());
                     receiveText.append("Received Invalid Selection Command");
                     Log.d(TAG, "Received Invalid Selection Command");
-                }
-                else {
+                } else if (command.equals("Not Available")) {
+
+                } else {
                     Log.d(TAG, "Selected Item : "+itemNum);
                     mIsSelectionDone = true;
                     send(laRheaCommands.querySelectionStatus());
                 }
+                    receiveText.append("Item selected : " + command);
+                    mIsSelectionDone = true;
+                    send(laRheaCommands.querySelectionStatus());
             }
             else if (command.equalsIgnoreCase("#S2")){
                 Log.d(TAG,"Received check query selection status : " + command);
-//                if (!mIsSelectionDone) {
-//                    handleSelectionStatus(data);
-//                }
-                handleSelectionStatus(data);
+
+                if (mIsSelectionDone) {
+                    handleSelectionStatus(data);
+                }
+                else {
+                    command = data.substring(6, 8);
+                    receiveText.append(newline + "Please Choose Your Desired item from mini menu "+command);
+                    Log.d(TAG,"Received check query selection status : " + command);
+                }
             }
             else if (command.equalsIgnoreCase("#S3")){
                 Log.d(TAG, "Received Selection already paid command" + command);
                 itemNum = data.substring(3,5);
                 if (command.equalsIgnoreCase("#S3")) {
-                    receiveText.append("Received Selection already paid command "+command);
-                    Log.d(TAG, "Received Selection already paid command "+command);
-                    send(laRheaCommands.querySelectionStatus());
+                    receiveText.append("Received Selection already paid command "+ command);
+                    Log.d(TAG, "Received Selection already paid command "+ command);
+                    try {
+                         Thread.sleep(3000); // Sleep for 3 second
+                         send(laRheaCommands.querySelectionStatus());
+                      } catch (InterruptedException e) {
+                           e.printStackTrace();
+                      }
                 }
                 else if(itemNum.equalsIgnoreCase("00")) {
                     receiveText.append("Invalid selection item"+itemNum);
@@ -464,9 +497,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 send(laRheaCommands.querySelectionStatus());
             }
             else if (command.equalsIgnoreCase("#C1")){
-//                String errorMsg = TextUtil.hexToAscii(command.substring(8, 10));
-                receiveText.append("Received CPU Screen Message Command"+command);
-                Log.d(TAG, "Received CPU Screen Message Command"+command);
+                receiveText.append("Received CPU Screen Message Command " + command);
+                Log.d(TAG, "Received CPU Screen Message Command " + command);
                 handleVendFailure(data);
             }
             else if (command.equalsIgnoreCase("#C2")){
@@ -492,7 +524,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
             else if (command.equalsIgnoreCase("#C7")){
                 receiveText.append("Received Get Cpu Status"+command);
-                Log.d(TAG, "Received Get Cpu Status");
+                Log.d(TAG, "Received Get Cpu Status " + command);
             }
             else if (command.equalsIgnoreCase("#C8")){
                 receiveText.append("Received Get Daily Sales Data"+command);
@@ -512,25 +544,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
-//    private void handleItemAvailability(String command) {
-//
-//    }
-
-//    private void handlePressingButton(String command) {
-//        String button = command.substring(0,6);
-//
-//        if (command.equalsIgnoreCase(String.valueOf(lockButtonStop))){
-//            receiveText.append("Received lock button stop"+button);
-//            Log.d(TAG, "Received lock button stop");
-//            send(laRheaCommands.querySelectionStatus());
-//        }
-//        else if(command.equalsIgnoreCase(String.valueOf(unlockButtonStop))){
-//            receiveText.append("Received unlock button stop"+button);
-//            Log.d(TAG, "Received unlock button stop");
-//            send(laRheaCommands.querySelectionStatus());
-//        }
-//    }
-
     private void handleSelectionStatus(String data) {
 
 //        if (mIsTransactionProcessing && !mIsSelectionDone) {
@@ -542,28 +555,25 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         String command = data.substring(6, 8);
 
-        if (command.equalsIgnoreCase("01")){
+        if (command.equalsIgnoreCase("01") && mIsSelectionDone){
             receiveText.append(newline + "Waiting for payment \n" + command);
             Log.d(TAG, "Waiting for payment" + "Status :"+ command) ;
 //            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
-            if (!mIsTransactionProcessing){
-//                send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
-            }
-            else {
-                Log.d(TAG, "Payment Cancelled" + "Status :"+ command);
-            }
         }
         else if (command.equalsIgnoreCase("02")){
-            Log.d(TAG, "Delivering in progress"+command);
-            receiveText.append(newline + "delivering in progress"+command);
+            Log.d(TAG, "Delivering in progress "+ command);
+            receiveText.append(newline + "delivering in progress "+command);
         }
         else if (command.equalsIgnoreCase("03")){
-            Log.d(TAG, "Finished KO Status"+command);
-            receiveText.append(newline + "Finished KO "+command);
+            Log.d(TAG, "Finished KO Status " + command);
+            receiveText.append(newline + "Finished KO, Selection haven't pay "+command);
         }
         else if (command.equalsIgnoreCase("04")){
-            Log.d(TAG, "Finished OK Status"+command);
+            Log.d(TAG, "Finished OK Status "+command);
             receiveText.append(newline + "Finished OK "+command);
+            mIsSelectionDone = false;
+
+            send(laRheaCommands.getCpuScreenMessage());
         }
         else if (command.equalsIgnoreCase("05")){
             Log.d(TAG, "Delivering in progress "+command);
@@ -573,19 +583,25 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         }
     }
 
-    private void handleVendFailure(String errorMsg){
-        String errorCde = errorMsg.substring(3,4);
-        String extractCde = TextUtil.hexToAscii(errorMsg);
-        receiveText.append(extractCde);
+    private void handleVendFailure(String message){
         if (!mIsTransactionProcessing){
 //            sendPaymentVoid();
-        }else {
-            if (errorMsg.equalsIgnoreCase("OFF3")) {
-                Log.d(TAG, "The sensor monitoring the liquid level of the drip tray has triggered");
-            } else if (errorMsg.equalsIgnoreCase("OFF5")) {
-                Log.d(TAG, "Systems integrated into the CPU circuit do not function properly");
-            }
-            else if (errorMsg.equalsIgnoreCase("OFF6")) {
+        }
+        extractCde = TextUtil.hexToAscii(message);
+        if (extractCde.contains("product reserve REFILL COFFE") || extractCde.contains("product reserve")
+        || extractCde.contains("product reserve REFILL")){
+//            receiveText.append(" REFILL COFFEE BEANS");
+//            updateProductListVisibility(true);
+        }
+        else if (extractCde.contains("place your cup")){
+//            send(laRheaCommands.getCpuScreenMessage());
+        }
+        else if (message.length() > 100){
+            updateProductListVisibility(false);
+            String errorCde = message.substring(105,106);
+            String errorMsg = extractCde.substring(21,26).trim();
+
+            if (errorMsg.equalsIgnoreCase("OFF 6")) {
 
                 if (errorCde.equalsIgnoreCase("C")){
                     Log.d(TAG, "Excessive air breaker filling time; there may be no hydraulic power, the pressure may be \n" +
@@ -597,86 +613,90 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 } else if (errorCde.equalsIgnoreCase("G")) {
                     Log.d(TAG, "During the first installation, there was an error in filling water into the device");
                 }
-
             }
-            else if (errorMsg.equalsIgnoreCase("OFF7")) {
-                if (errorCde.equalsIgnoreCase("A")){
+            else if (errorMsg.contains("OFF 7")) {
+                if (errorCde.contains("A")){
                     Log.d(TAG, "Time inclusion pump hydraulic contour exceeded limit value");
                 }
-                else if (errorCde.equalsIgnoreCase("C")){
+                else if (errorCde.contains("C")){
                     Log.d(TAG, "During the brewing phase, the chamber moved downwards, beyond the safety limits, due to pressure");
-                } else if (errorCde.equalsIgnoreCase("D")) {
+                } else if (errorCde.contains("D")) {
                     Log.d(TAG, "the volumetric counter did not detect pulses within three seconds");
-                } else if (errorCde.equalsIgnoreCase("R")) {
+                } else if (errorCde.contains("R")) {
                     Log.d(TAG, "error at the water recycling stage");
                 }
             }
-            else if (errorMsg.equalsIgnoreCase("OFF8")) {
+            else if (errorMsg.contains("OFF 8")) {
                 Log.d(TAG, "Coffee maker issue");
-                if (errorCde.equalsIgnoreCase("A")){
+                if (errorCde.contains("A")){
                     Log.d(TAG, "block motor error due to missing or erroneous power supply, rotation detection error");
-                } else if (errorCde.equalsIgnoreCase("B")) {
+                } else if (errorCde.contains("B")) {
                     Log.d(TAG, "the device does not detect the presence of a block");
                 }
             }
-            else if (errorMsg.equalsIgnoreCase("OFF9")) {
+            else if (errorMsg.contains("OFF 9") || extractCde.contains("REFILL COFFEE")) {
+                updateProductListVisibility(true);
                 Log.d(TAG, "Coffee beans issue : indicates that the amount of ground coffee is less than required or missing");
+                receiveText.append("Coffee beans issue : indicates that the amount of ground coffee is less than required or missing");
             }
-            else if (errorMsg.equalsIgnoreCase("OFF10")) {
+            else if (errorMsg.contains("OFF 10")) {
                 Log.d(TAG, "the stored data is inappropriate (reading or writing error) or the overall functioning of the device is not as expected");
             }
-            else if (errorMsg.equalsIgnoreCase("OFF14")) {
+            else if (errorMsg.contains("OFF 14")) {
                 errorCde.substring(4,5);
-                if (errorCde.equalsIgnoreCase("V")){
+                if (errorCde.contains("V")){
                     Log.d(TAG, "Hydraulic circuit : the water is not filled");
                 }
             }
-            else if (errorMsg.equalsIgnoreCase("OFF17")) {
+            else if (errorMsg.contains("OFF 17")) {
                 Log.d(TAG, "keypads issue");
                 errorCde.substring(4,5);
-                if (errorCde.equalsIgnoreCase("A")){
+                if (errorCde.contains("A")){
                     Log.d(TAG, "the button is defined as if it is always pressed");
                 }
             }
-            else if (errorMsg.equalsIgnoreCase("OFF24")) {
+            else if (errorMsg.contains("OFF 24")) {
                 errorCde.substring(4,5);
-                if (errorCde.equalsIgnoreCase("A")){
+                if (errorCde.contains("A")){
                     Log.d(TAG, "The effective voltage value of 24 V DC exceeds the permissible value");
                 }
-                else if (errorCde.equalsIgnoreCase("V")){
+                else if (errorCde.contains("V")){
                     Log.d(TAG, "the measured 24 VDC voltage is below the permissible limit or missing");
                 }
             }
-            else if (errorMsg.equalsIgnoreCase("OFF31")) {
+            else if (errorMsg.contains("OFF 31")) {
                 Log.d(TAG, "Water coffee espresso issue");
                 errorCde.substring(4,5);
-                if (errorCde.equalsIgnoreCase("A")){
+                if (errorCde.contains("A")){
                     Log.d(TAG, "the boiler water temperature exceeds the programmed value");
                 }
-                else if (errorCde.equalsIgnoreCase("B")){
+                else if (errorCde.contains("B")){
                     Log.d(TAG, "the water does not reach the set temperature");
                 }
-                else if (errorCde.equalsIgnoreCase("C")){
+                else if (errorCde.contains("C")){
                     Log.d(TAG, "the temperature sensor is interrupted or its electrical connector is disconnected");
                 }
-                else if (errorCde.equalsIgnoreCase("D")){
+                else if (errorCde.contains("D")){
                     Log.d(TAG, "temperature not reaches programmed values V acceptable time limits");
                 }
-                else if (errorCde.equalsIgnoreCase("H")){
+                else if (errorCde.contains("H")){
                     Log.d(TAG, "lack of power to the induction sensor; clicson has tripped, no current is supplied from the \n" +
                             "circuit, wiring is disconnected or out of use");
                 }
             }
-            else if (errorCde.equalsIgnoreCase("42")){
+            else if (errorCde.contains("42")){
                 Log.d(TAG, "indicates the need to service the coffee machine due to the number of expressos \n" +
                         "dispensed;");
             }
-            else if (errorCde.equalsIgnoreCase("43")){
+            else if (errorCde.contains("43")){
                 Log.d(TAG, "the number of used pods in the container has reached the maximum limit");
             }
-            else if (errorCde.equalsIgnoreCase("77")){
+            else if (errorCde.contains("77")){
                 Log.d(TAG, "The clock function does not work properly");
             }
+        }
+        else {
+            send(laRheaCommands.getCpuScreenMessage());
         }
     }
 
@@ -695,6 +715,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         Toast.makeText(getActivity(),  "vmc connected", Toast.LENGTH_SHORT).show();
 
         connected = Connected.True;
+
+        send(laRheaCommands.getCpuScreenMessage());
     }
 
     @Override

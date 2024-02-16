@@ -81,6 +81,10 @@ final class TextUtil {
         return finalValue;
     }
 
+    static String removeNullCharacters(String input) {
+        return input.replaceAll("\\x00", "");
+    }
+
     static byte getLSB(int value) {
         return (byte) (value & 0xFF);
     }
@@ -163,7 +167,8 @@ final class TextUtil {
             int decimal = Integer.parseInt(hex, 16);
             output.append((char) decimal);
         }
-        return output.toString();
+//        return output.toString();
+        return removeNullCharacters(output.toString());
     }
 
     static class HexWatcher implements TextWatcher {

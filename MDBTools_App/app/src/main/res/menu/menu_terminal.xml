@@ -7,8 +7,8 @@
         android:title="Clear"
         app:showAsAction="always" />
     <item
-        android:id="@+id/checkAPIVer"
-        android:title="Check API Version"
+        android:id="@+id/showCoffeeSelection"
+        android:title="Show a coffee selection"
         app:showAsAction="never"/>
     <item
         android:id="@+id/getSelectionAvail"
@@ -29,6 +29,10 @@
     <item
         android:id="@+id/sendPayment"
         android:title="Make a Payment"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/getCpuStatus"
+        android:title="Get CPU Status"
         app:showAsAction="never" />
     <item
         android:id="@+id/sendStatusChecking"

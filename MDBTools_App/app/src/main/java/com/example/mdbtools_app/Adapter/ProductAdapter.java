@@ -36,6 +36,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         void onItemClick(Product product) throws IOException, InterruptedException;
     }
 
+    public void setProducts(List<Product> productList) {
+        this.productList = productList;
+        notifyDataSetChanged();
+    }
+
     public ProductAdapter(Context context, List<Product> productList, OnItemClickListener listener) {
         this.context = context;
         this.productList = productList;
@@ -55,6 +60,12 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         holder.productName.setText(product.getName());
         holder.productPrice.setText(product.getPrice());
         holder.productImage.setImageResource(product.getImageResource());
+
+        if (product.isVisible()) {
+            holder.itemView.setVisibility(View.VISIBLE);
+        } else {
+            holder.itemView.setVisibility(View.GONE);
+        }
     }
 
     @Override
