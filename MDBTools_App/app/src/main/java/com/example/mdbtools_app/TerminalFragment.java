@@ -274,7 +274,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             send(laRheaCommands.getCpuScreenMessage());
             return true;
         } else if (id == R.id.sendPayment) {
-            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt(itemPrice)));
+            send(laRheaCommands.alreadyPaidSelection(itemSelection, Integer.parseInt("0")));
             return true;
         }
         else if (id == R.id.getCpuStatus) {
@@ -504,7 +504,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             else if (command.equalsIgnoreCase("#C2")){
                 receiveText.append("Received get selection availability");
                 Log.d(TAG, "Received get selection availability" + command);
-//                handleItemAvailability(command);
+                handleItemAvailability(data);
             }
             else if (command.equalsIgnoreCase("#C3")){
                 receiveText.append("Received Get Selection Price"+command);
@@ -542,6 +542,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 //                LOGGER.warn("[{}] Received ?? Command: {}. Please check !!!", TAG, data);
             }
         }
+    }
+
+    private void handleItemAvailability(String command) {
+        String extractMsg = command.substring(6, 18);
+        String hexToBinary = TextUtil.hexToBinary(extractMsg);
+        String itemAvailability = TextUtil.getItemAvailalbility(hexToBinary);
+
+        Log.d(TAG, "Selection(s) available :" + itemAvailability);
     }
 
     private void handleSelectionStatus(String data) {

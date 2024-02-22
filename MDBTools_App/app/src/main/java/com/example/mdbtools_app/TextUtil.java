@@ -224,15 +224,31 @@ final class TextUtil {
         }
     }
 
-//    static int calculateCHK(String message) {
-//        int sum = 0;
-//        for (int i = 0; i < message.length(); i++) {
-//            char c = message.charAt(i);
-//            int asciiValue = (int) c;
-//            sum += asciiValue;
-//        }
-//        return sum;
-//    }
+    static String hexToBinary(String hexNumber) {
+        // Convert hex to decimal
+        long decimalNumber = Long.parseLong(hexNumber, 16);
+
+        // Convert decimal to binary
+        String binaryRepresentation = Long.toBinaryString(decimalNumber);
+
+        return binaryRepresentation;
+    }
+
+    static String getItemAvailalbility(String hexNumber) {
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < hexNumber.length(); i++) {
+            if (i + 1 >= 1 && i + 1 <= 48) { // Check if within the specified range
+                char digit = hexNumber.charAt(i);
+                if (digit == '1') {
+                    result.append((i + 1)).append(" ");
+                }
+            }
+        }
+        String resultString = result.toString().trim();
+        return resultString;
+    }
+
 static int calculateCHK(String message) {
     int chk = 0;
     for (int i = 0; i < message.length(); i++) {
